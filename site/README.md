@@ -1,10 +1,11 @@
 # WorkOS init() StopWatch guide
 
-Team source is the `site/` directory in private
-[workos/stopwatch](https://github.com/workos/stopwatch). Propose changes there and
-use [the root promotion runbook](../docs/site-promotion.md) to publish a reviewed
-commit to the existing Alto application. The older standalone checkout remains
-a publication history/reference, not a second place to develop changes.
+Canonical source is the `site/` directory in
+[chantastic/stopwatch](https://github.com/chantastic/stopwatch). Test changes and
+commit directly to `main`; pull requests are not required. Source pushes do not
+deploy the website. The former WorkOS publisher is retained as legacy, and a
+replacement publisher is pending; see [publication status](../docs/site-promotion.md).
+The older standalone checkout remains publication history/reference.
 
 Static technical reference plus a downloadable agent skill. The site follows system light/dark appearance through CSS, including the official logos, without requiring JavaScript or a saved preference. Site source uses no external scripts, fonts, analytics, or runtime dependencies; the hosting layer may inject its own analytics beacon.
 
@@ -32,17 +33,18 @@ Visit `http://localhost:4173/`. The server binds to `0.0.0.0` and reads `PORT` (
 
 ## Conference installer
 
-The firmware project produces the reviewed static installer bundle; copy its
-`index.html`, `style.css`, `installer.js`, and `THIRD_PARTY_NOTICES.txt` into
-`public/stopwatch/install/`. Keep the hardware protocol and flashing logic in
-that project. This repository owns hosting and the existing guide.
+The root `web-flasher/` project produces the tested static installer bundle;
+copy its `index.html`, `style.css`, `installer.js`, and `THIRD_PARTY_NOTICES.txt`
+into `public/stopwatch/install/`. Keep the hardware protocol and flashing logic
+in `web-flasher/`; this directory owns hosting and the existing guide.
 
 Firmware bytes are GitHub Release assets in
 `chantastic/m5stack-stopwatch-authkit`, tag `conference-factory-3`. They must
 never be checked into this repository. `src/release-config.json` pins each
 filename, byte length, and SHA-256 from the approved package, including the
 manifest itself. To publish a new release, update those pins and the installer
-version together after verifying the package in the firmware repository.
+version together after qualifying and publishing the new firmware package.
+Moving source to `chantastic/stopwatch` does not change these artifact URLs.
 
 The managed build and local preview share `src/release-assets.mjs`. It permits
 only the configured release paths, forwards no browser credentials or headers,
@@ -81,11 +83,13 @@ The production entry is `src/index.ts`, a Cloudflare Worker. `npm run build` pac
 
 Alto application: `01M2P6VWDZ9GVRJH1ACT7RN7F5` (`stopwatch`). Publication remote:
 `https://git.workos.cloud/stopwatch.git`. Git credentials come from
-`alto auth git-credential`; never put them in the remote URL. From the team
-repository, use `scripts/promote-site.sh` as documented in the root runbook.
-The explicit publish action pushes the reviewed site tree to Alto main, which
-starts production publication. Verify hosting and the anonymous public URLs.
-Do not run `wrangler deploy` without `--dry-run`.
+`alto auth git-credential`; never put them in the remote URL. The retained
+`scripts/promote-site.sh` only supports the former WorkOS repository and review
+workflow; it cannot publish `chantastic/stopwatch`. A replacement publisher is
+pending, as documented in [publication status](../docs/site-promotion.md).
+An Alto main push starts a managed build and can deploy production immediately.
+Any future publication must verify the tested site tree, release pins, hosting,
+and anonymous public URLs. Do not run `wrangler deploy` without `--dry-run`.
 
 After verifying the standalone installer, publish the generated HTML to the
 existing Drop with `alto drops stage stopwatch --file .build/drop-stopwatch.html --json`,

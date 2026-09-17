@@ -1,19 +1,21 @@
 # M5Stack StopWatch conference badge
 
-The WorkOS team maintains firmware and the installer website together in
-[workos/stopwatch](https://github.com/workos/stopwatch). Request improvements in
-[Issues](https://github.com/workos/stopwatch/issues), propose changes with a pull
-request, and follow [Contributing](CONTRIBUTING.md) for checks and release review.
+Firmware and the installer website live together in
+[chantastic/stopwatch](https://github.com/chantastic/stopwatch), the canonical
+source repository. Request improvements in
+[Issues](https://github.com/chantastic/stopwatch/issues). Tested changes go
+directly to `main`; see [Contributing](CONTRIBUTING.md) for checks and releases.
 
 | Area | Source | Publication |
 | --- | --- | --- |
 | Badge firmware | `firmware/factory_badge/` | Qualified, versioned firmware release |
-| Browser flashing logic | `web-flasher/` | Reviewed bundle copied into `site/public/stopwatch/install/` |
-| Guide and installer website | `site/` | [Manual Alto promotion](docs/site-promotion.md) |
+| Browser flashing logic | `web-flasher/` | Tested bundle copied into `site/public/stopwatch/install/` |
+| Guide and installer website | `site/` | [Alto publication status](docs/site-promotion.md) |
 
 The [live installer](https://drops.workos.cloud/stopwatch) continues to serve the
-hardware-tested `conference-factory-3` release. Merging a pull request in this
-repository does not deploy the website or publish firmware automatically.
+hardware-tested `conference-factory-3` release. Pushing this repository does not
+deploy the website or publish firmware automatically. The former WorkOS promotion
+script is retained as legacy; a publisher for this repository is pending.
 
 An offline, locally configurable conference badge for the **M5Stack StopWatch**.
 The active firmware uses the factory **ESP-IDF + LVGL + Smooth UI Toolkit +
@@ -81,7 +83,7 @@ computer's current local offset. See the [clock and batch runbook](docs/conferen
 for first-install storage preparation and failure handling. Ordinary flashes
 preserve user storage. Before uploading, the script reads and verifies the current
 partition map and follows the same USB identity across resets. A factory or
-different map is rejected; factory conversion requires a separate reviewed
+different map is rejected; factory conversion requires a separately authorized
 migration, not the filesystem-initialization option. No full-device dump,
 developer profile, or photo is shipped.
 

@@ -10,24 +10,24 @@ assets, never Git source files or copies of a device's flash. The first alpha is
 - Requested entry: `https://drops.workos.cloud/stopwatch` redirects to the installer.
 - Installer: `https://stopwatch.workos.cloud/stopwatch/install/`.
 - Existing guide Drop: `https://drop.workos.cloud/stopwatch` (singular).
-- Issue reports: `https://github.com/chantastic/m5stack-stopwatch-authkit/issues`.
+- Issue reports: `https://github.com/chantastic/stopwatch/issues`.
 
 Alto Drop documents run in a sandboxed iframe without USB permissions. The Drop
 links to the standalone application; do not embed the flasher in a Drop.
 The application uses its existing public `/stopwatch` surface. The Drop retains
-its existing organization audience. Canonical team source is now the private
-`workos/stopwatch` repository, with the website under `site/`. Alto's managed
-`https://git.workos.cloud/stopwatch.git` remains the publication target. Use the
-[reviewed site promotion workflow](site-promotion.md), rather than editing or
-pushing the standalone publication checkout directly. The small plural-host
-redirect remains a separate Alto application, `drops`.
+its existing organization audience. Canonical source is
+[chantastic/stopwatch](https://github.com/chantastic/stopwatch), with the website
+under `site/`. Tested changes go directly to `main`; they do not deploy the site.
+Alto's managed `https://git.workos.cloud/stopwatch.git` remains the publication
+target. The old WorkOS promotion script cannot publish this repository, and a
+replacement publisher is pending; see [publication status](site-promotion.md).
+The small plural-host redirect remains a separate Alto application, `drops`.
 
 The existing public release files remain in `chantastic/m5stack-stopwatch-authkit`
-so anonymous installers can still download them. They are release distribution,
-not the new team's source-of-truth repository. A private GitHub release is not a
-drop-in replacement for these public downloads. Until a team-owned public artifact
-channel is configured and verified, the current release maintainer publishes new
-approved files there; contributors can submit and review all source changes here.
+so anonymous installers can still download the exact pinned bytes. That repo is
+the current artifact host, not the source of truth. Do not replace these URLs
+with the new source repository until a new release has been qualified, published,
+and verified there. Moving source alone does not move firmware assets.
 
 ## Browser installation paths
 
@@ -40,8 +40,8 @@ explicit replacement confirmation for the recognized factory layout. **Finish
 first install** can prepare unavailable storage after an interrupted conversion.
 See [browser first install](browser-factory-install.md) for the exact safeguards
 and pending hardware qualification. These paths reuse the same published release;
-website publication still requires review. A failed update never erases storage
-automatically.
+website publication remains a separate action. A failed update never erases
+storage automatically.
 
 The browser downloads and verifies hashes, then checks ESP32-S3 security state,
 16 MiB flash, the complete existing partition sector and a recognized app0 boot
@@ -93,10 +93,12 @@ then packages those bytes as ignored generated Worker content. The same-origin
 download routes need no runtime GitHub request or browser credentials. Binaries
 and generated content remain outside Git.
 
-Copy `.build/web-installer/` into `site/public/stopwatch/install/`, run the
-site's checks, and publish through the reviewed Alto promotion script. Do not use a
-direct Cloudflare deployment for that application. Stage and publish the updated
-Drop separately, preserving its audience. Verify the anonymous installer and all
+Copy `.build/web-installer/` into `site/public/stopwatch/install/` and run the
+site's checks. Alto publication needs the replacement publisher described in
+[publication status](site-promotion.md); the retained WorkOS promotion script
+cannot publish this repository. Do not use a direct Cloudflare deployment for
+that application. Stage and publish the updated Drop separately, preserving its
+audience. Verify the anonymous installer and all
 four deployed asset hashes after publication. Alto's managed Worker egress policy
 can reject runtime GitHub fetches; the first proxy deployment returned 502 even
 though Node and local workerd checks passed. Keep release acquisition in the

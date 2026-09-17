@@ -1,9 +1,13 @@
 # Alto app
 
-This directory is the website portion of `workos/stopwatch`. Edit it in a GitHub
-pull request. The standalone Alto repository is a publication target; use the
-root `scripts/promote-site.sh` and `docs/site-promotion.md` after review. A direct
-push to Alto `main` deploys production. Do not bypass the team review workflow.
+This directory is the website portion of canonical `chantastic/stopwatch`.
+Test changes and commit directly to `main`; do not open pull requests unless the
+user asks. The standalone Alto repository remains a publication target. The
+retained root `scripts/promote-site.sh` requires the former WorkOS repository and
+review workflow and cannot publish this repo. A replacement publisher is pending;
+read `docs/site-promotion.md` before publication work. A direct push to Alto
+`main` starts a production build and can deploy immediately. Pushing source or
+flashing a device does not publish the site.
 
 This repository is an Alto app. Alto handles identity, hosting, storage, secrets, builds, and releases.
 

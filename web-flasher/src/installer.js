@@ -257,7 +257,7 @@ $("copy").addEventListener("click", async () => {
 });
 $("report").addEventListener("click", () => {
   const body = "## What happened?\n\n\n## What did you expect?\n\n\n## Steps to reproduce\n\n\n## Badge details\n\n```json\n" + JSON.stringify(diagnostics || { release: BUILD, status: "Not checked in this browser" }, null, 2) + "\n```\n\nBrowser / operating system:\nOrientation:\n\nPlease omit recovery backups, Wi-Fi passwords, personal photos, and raw device logs.";
-  $("report").href = "https://github.com/chantastic/m5stack-stopwatch-authkit/issues/new?" + new URLSearchParams({ title: "[Badge preview] ", body });
+  $("report").href = "https://github.com/chantastic/stopwatch/issues/new?" + new URLSearchParams({ title: "[Badge preview] ", body });
 });
 $("unsupported").hidden = supported;
 $("save-unsupported").hidden = !supported || canSave;

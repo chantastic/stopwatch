@@ -107,7 +107,7 @@ describe('Public StopWatch routes', () => {
   it('links the preserved guide to the installer and issue form', async () => {
     const html = await (await get('/stopwatch')).text();
     expect(html).toContain('href="/stopwatch/install/">Install conference badge');
-    expect(html).toContain('https://github.com/chantastic/m5stack-stopwatch-authkit/issues/new');
+    expect(html).toContain('https://github.com/chantastic/stopwatch/issues/new');
     expect(html).toContain('id="hardware"');
     expect(html).toContain('id="agents"');
     expect(html).not.toContain('a WorkOS init() image is not included');

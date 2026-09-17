@@ -49,5 +49,7 @@ continues to own serial framing, compression, flash writes, and MD5 verification
 
 The first-install change reuses the existing `conference-factory-3` release;
 it changes neither firmware binaries nor release pins. Host tests use synthetic
-devices and do not establish a successful physical factory conversion. Publish
-only through the [reviewed Alto promotion workflow](../docs/site-promotion.md).
+devices and do not establish a successful physical factory conversion. Tested
+source changes go directly to `chantastic/stopwatch` main. Website publication
+is separate and its replacement publisher is pending; see
+[publication status](../docs/site-promotion.md).

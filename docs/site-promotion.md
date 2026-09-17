@@ -1,11 +1,35 @@
-# Promote the website to Alto
+# Website publication
 
-WorkOS GitHub owns reviewable source in `workos/stopwatch`. The website lives in
-`site/`; firmware remains at the repository root. Alto continues serving the
-existing `stopwatch` application from `https://git.workos.cloud/stopwatch.git`.
-GitHub CI tests changes but does not hold Alto credentials or deploy the site.
+Canonical source is [chantastic/stopwatch](https://github.com/chantastic/stopwatch).
+The website lives in `site/`; tested source changes go directly to `main` without
+a pull request or mandatory reviewer. Source pushes and device flashes do not
+deploy the website.
 
-## Review, then promote
+Alto still serves the existing `stopwatch` application from
+`https://git.workos.cloud/stopwatch.git`, with the installer at
+<https://drops.workos.cloud/stopwatch>. The source move does not change hosting,
+access, the live site, or the existing pinned firmware downloads.
+
+**A publisher for the personal repository is pending.** The retained
+`scripts/promote-site.sh` is a legacy WorkOS publisher: it rejects this repo and
+requires WorkOS-specific merged-PR/check metadata. Do not present it as a working
+publication path for `chantastic/stopwatch`. A replacement needs to verify the
+exact tested `site/` tree, preserve firmware asset pins, and verify the resulting
+Alto release. No WorkOS approval requirement applies to source changes here.
+
+Run the local browser/site checks in [Contributing](../CONTRIBUTING.md) before
+publication work. Any Alto `main` push starts a managed build and can deploy
+production immediately; it is not a preview. Keep deployment an explicit action.
+The existing public `conference-factory-3` files remain pinned in
+`site/src/release-config.json` until a new release is qualified and published.
+
+## Legacy WorkOS publisher reference
+
+The remainder describes the retained script's old contract, not the development
+or publication workflow for the personal repository. It is preserved to explain
+why that script refuses the new source repository and what its checks protect.
+
+### Review, then promote in the former WorkOS repository
 
 1. Make changes on a branch and open a pull request into `main`.
 2. Obtain an approved review and pass all four required checks: **Browser checks**,
@@ -31,7 +55,7 @@ written to source, embedded in a remote URL, or stored in GitHub Actions.
 The bootstrap import has no merged approved pull request and cannot be promoted
 by this command. Importing the repository does not change the live site.
 
-## What the command verifies
+### What the legacy command verifies
 
 The default invocation changes no remote state. It fetches GitHub main and reads
 GitHub review/check metadata, then uses a temporary Alto checkout to install the
@@ -62,7 +86,7 @@ Concurrent Alto changes cause refusal. There is no force-push or history rewrite
 The command then follows that exact publication SHA with `alto deploy --no-push`
 and requires verified production routing and an edge response for its release.
 
-## A push is a production action
+### A push is a production action
 
 **Pushing Alto `main` starts its managed build and can automatically deploy it.**
 The later `alto deploy --no-push` call waits for and verifies the selected commit;
@@ -74,7 +98,7 @@ workflow or public per-app switch to disable automatic promotion. Keep code
 review in GitHub. The script does not alter Alto sharing, grants, secrets, public
 surfaces, the `drops` redirect app, or the existing singular Drop.
 
-## Firmware releases remain separate
+### Firmware releases remain separate
 
 Promoting a website does not compile, flash, tag, or upload firmware. The site's
 `src/release-config.json` controls the public release repository, tag, filenames,
@@ -87,7 +111,7 @@ release assets, followed by a reviewed update to the site pins and installer
 bundle. Private GitHub source does not make public installer downloads private;
 this promotion command does not change their existing publication location.
 
-## After publication or a failure
+### After publication or a failure
 
 Check the installer, downloads, and issue link at
 <https://drops.workos.cloud/stopwatch>. Use the [Alto releases page](https://workos.cloud/applications/stopwatch?tab=releases)
@@ -101,6 +125,6 @@ production has changed. The command never automatically rolls back a release.
 If GitHub or Alto main advanced during verification, fetch the new state and
 review it before starting again; do not bypass the guard with a force push.
 
-Older standalone website checkouts are retained as deployment history, not a
-second place to author changes. Future source edits belong in this repository's
-`site/` directory.
+Older standalone website checkouts and the WorkOS repository are retained as
+history, not places to author new changes. Current source edits belong in
+`chantastic/stopwatch` under `site/`.

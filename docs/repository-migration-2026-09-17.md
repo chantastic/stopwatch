@@ -1,5 +1,11 @@
 # WorkOS team repository — September 17, 2026
 
+> **Superseded:** canonical source is now
+> [chantastic/stopwatch](https://github.com/chantastic/stopwatch), with tested
+> changes committed directly to `main`. The WorkOS migration and review workflow
+> below are historical. See [Contributing](../CONTRIBUTING.md) and
+> [publication status](site-promotion.md) for current guidance.
+
 Canonical source is now private [workos/stopwatch](https://github.com/workos/stopwatch).
 The repository inherits WorkOS organization access. No individual or team grants
 were added during setup.

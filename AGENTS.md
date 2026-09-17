@@ -16,16 +16,19 @@
 
 ## Established constraints
 
-- Canonical team source is private `workos/stopwatch`: firmware at the repository
-  root, browser installer in `web-flasher/`, and Alto website under `site/`.
-  Read `CONTRIBUTING.md` and `docs/site-promotion.md` for review and release rules.
-  Alto's managed `stopwatch` Git repository is a publication target; edit `site/`
-  here and promote a reviewed main commit. A merge here does not deploy.
+- Canonical source is `chantastic/stopwatch`: firmware at the repository root,
+  browser installer in `web-flasher/`, and Alto website under `site/`. Tested
+  changes go directly to `main`; do not open pull requests unless the user asks.
+  Read `CONTRIBUTING.md` for checks and `docs/site-promotion.md` for publication.
+  Alto's managed `stopwatch` Git repository remains a publication target. The
+  retained `scripts/promote-site.sh` belongs to the former WorkOS review workflow
+  and cannot publish this repo; a replacement publisher is pending. A source
+  push or device flash does not deploy the website.
 - Current approved public firmware files remain in the original GitHub release
   repository, pinned by exact hashes in `site/src/release-config.json`. Moving
-  team source does not change those files or make private GitHub assets available
-  anonymously. New firmware needs an explicitly qualified release before updating
-  the website pins; never promote an untested binary because its host checks pass.
+  source ownership does not change those files or their download URLs. New firmware
+  needs an explicitly qualified release before updating the website pins; never
+  promote an untested binary because its host checks pass.
 - Active firmware is the native ESP-IDF project in `firmware/factory_badge/`.
   Read [factory-stack.md](docs/factory-stack.md) for the LVGL/Smooth/Mooncake
   architecture, per-page views, hardware boundary and pinned dependencies.

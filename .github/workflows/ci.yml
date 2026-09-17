@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 # This workflow builds and tests only. It has no publishing credentials or
-# deployment steps. Keep job names stable: main's protection requires them.
+# deployment steps. Direct pushes to main run the same checks as pull requests.
 permissions:
   contents: read
 
@@ -35,10 +35,6 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - name: Configure Socket Firewall
-        uses: workos/setup-socket-firewall@ca93dd8aa351f54f4729fe3377a9be23c631c25d # v1
-        with:
-          token: ${{ secrets.SOCKET_FIREWALL_TOKEN }}
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run build
@@ -66,10 +62,6 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
-      - name: Configure Socket Firewall
-        uses: workos/setup-socket-firewall@ca93dd8aa351f54f4729fe3377a9be23c631c25d # v1
-        with:
-          token: ${{ secrets.SOCKET_FIREWALL_TOKEN }}
       - name: Check manual promotion guards without network publication
         run: python3 ../tests/test_promote_site.py
       - run: npm ci --ignore-scripts

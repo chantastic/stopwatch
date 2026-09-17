@@ -31,7 +31,7 @@ any other hardware connected to IOs.`)}catch(i){throw new k("Unable to verify fl
 Browser / operating system:
 Orientation:
 
-Please omit recovery backups, Wi-Fi passwords, personal photos, and raw device logs.`;T("report").href="https://github.com/chantastic/m5stack-stopwatch-authkit/issues/new?"+new URLSearchParams({title:"[Badge preview] ",body:A})});T("unsupported").hidden=IA;T("save-unsupported").hidden=!IA||_i;at(!1);window.addEventListener("beforeunload",A=>{(j||J)&&(A.preventDefault(),A.returnValue="")});
+Please omit recovery backups, Wi-Fi passwords, personal photos, and raw device logs.`;T("report").href="https://github.com/chantastic/stopwatch/issues/new?"+new URLSearchParams({title:"[Badge preview] ",body:A})});T("unsupported").hidden=IA;T("save-unsupported").hidden=!IA||_i;at(!1);window.addEventListener("beforeunload",A=>{(j||J)&&(A.preventDefault(),A.returnValue="")});
 /*! Bundled license information:
 
 js-md5/src/md5.js:

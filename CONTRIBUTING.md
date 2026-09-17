@@ -1,9 +1,10 @@
 # Contributing
 
-This repository is the review home for the conference badge firmware, browser
-installer, and website. Use an issue to describe a bug or desired experience,
-then submit a pull request for review. Small, related changes are easier to test
-and promote together.
+[chantastic/stopwatch](https://github.com/chantastic/stopwatch) is the source of
+truth for the conference badge firmware, browser installer, and website. Make
+small, related changes, run the applicable checks, and commit directly to `main`.
+Pull requests and another person's approval are not required; do not open a pull
+request unless the user asks for one.
 
 ## Find the right source
 
@@ -20,16 +21,15 @@ Start with [AGENTS.md](AGENTS.md), [the factory stack](docs/factory-stack.md),
 The retained connected application and gateway snapshots are historical; the
 current badge works offline and uses temporary local Wi-Fi for phone setup.
 
-## Request and review a change
+## Make a change
 
-1. Describe the current behavior, desired result, and an example someone can
-   reproduce. Use the bug or change issue form when it fits.
-2. Work on a branch and open a pull request against `main`. Link the request and
-   explain the final behavior, relevant tests, and any release work still needed.
-3. Have another team member review the change and wait for the required checks.
-   Record hardware observations separately from simulated test results.
-4. Merge the reviewed change. Promotion to the live badge release or website is
-   a separate maintainer action; CI does not publish or flash devices.
+1. Establish the desired behavior and an example that can be checked.
+2. Implement and run the relevant checks below. Record hardware observations
+   separately from simulated test results.
+3. Commit the tested change to `main` and push to `chantastic/stopwatch`.
+4. Flash the connected device when requested, preserving its partition layout
+   and user state. Firmware releases and website publication are separate actions;
+   a source push performs neither.
 
 Keep passwords, tokens, personal profiles/photos, full-flash backups, NVS dumps,
 and raw device logs out of issues, pull requests, and Git. Generated binaries and
@@ -49,8 +49,8 @@ npm run build
 
 After changing the browser installer, copy the four generated files from
 `.build/web-installer/` into `site/public/stopwatch/install/` and include them in
-the same pull request. Browser checks compares those files byte for byte so the
-website cannot silently publish an older installer than the reviewed source.
+the same commit. The browser check compares those files byte for byte so the
+website cannot silently publish an older installer than the tested source.
 
 From `site/`:
 
@@ -90,9 +90,11 @@ Setup verifies ESP-IDF **5.5.4** and the framework revisions in
 `firmware/factory_badge/frameworks.json`. Compilation creates local artifacts;
 it does not access a badge.
 
-## Required CI checks
+## Automated checks
 
-All four checks run on pull requests and pushes to `main`:
+The workflow defines these four checks. GitHub Actions is currently disabled for
+this personal repository, so run the applicable checks locally; committing the
+workflow does not enable it or establish a passing run.
 
 | Check name | Coverage |
 | --- | --- |
@@ -101,22 +103,12 @@ All four checks run on pull requests and pushes to `main`:
 | Firmware host checks | macOS regression fixtures, native service/clock/UI simulations, and release packaging guards |
 | Firmware build | Native ESP32-S3 compilation with the pinned SDK and framework sources |
 
-Keep these check names stable when changing the workflow, because branch
-protection uses them. Workflow actions are pinned to reviewed official commit
-SHAs. Updating a dependency should include its lockfile or recorded revision and
-the relevant checks.
-
-Both npm jobs use WorkOS's pinned
-[Socket Firewall setup action](https://github.com/workos/setup-socket-firewall)
-and the existing private-repository `SOCKET_FIREWALL_TOKEN` organization secret.
-The token is passed only to that action; it is not a publishing credential. Setup
-fails before dependency installation if the organization secret is unavailable.
-Resolve secret delivery through the established WorkOS process instead of
-switching CI to an unprotected registry. GitHub's separate Socket project report
-does not replace this dependency-download control.
+Workflow actions remain pinned to official commit SHAs. The personal repository
+uses no WorkOS-only Socket action or organization secret. Updating a dependency
+should include its lockfile or recorded revision and the relevant checks.
 Both web projects omit registry-specific `resolved` URLs from their npm lockfiles
 using `.npmrc`; versions and integrity hashes remain pinned. Keep that portable
-metadata convention without overriding the machine's protected registry.
+metadata convention without overriding the machine's configured registry.
 
 ## Qualify and promote a release
 
@@ -132,6 +124,7 @@ Preserve saved user state and the exact partition layout. Build once for a
 batch, then provision and verify a fresh clock on each badge. A failed preflight
 must never trigger an automatic erase or format.
 
-Firmware assets, installer/site changes, and Alto promotion remain explicit
-maintainer steps. Review the exact build, hashes, website changes, and remaining
-limitations before making them available to attendees.
+Firmware assets and website publication remain explicit maintainer steps. Verify
+the exact build, hashes, website changes, and remaining limitations before making
+them available to attendees. The retained WorkOS promotion script does not
+publish this repository; see [publication status](docs/site-promotion.md).

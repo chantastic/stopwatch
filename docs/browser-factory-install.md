@@ -93,5 +93,7 @@ bundle. This change does not add a new firmware binary or alter the release pins
 Host coverage includes exact layout checks, bounded writes, backup corruption and
 save failures, post-write verification, and explicit initialization behavior.
 Physical USB disconnect/recovery and a full factory conversion still need device
-qualification. Follow [site promotion](site-promotion.md): reviewed GitHub changes,
-four passing checks on the merged main commit, then explicit Alto publication.
+qualification. Tested source changes go directly to `chantastic/stopwatch` main.
+Website publication is separate; the former WorkOS promotion script cannot
+publish this repository. See [publication status](site-promotion.md) for the
+pending replacement publisher and unchanged firmware pins.
