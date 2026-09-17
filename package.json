@@ -1,0 +1,24 @@
+{
+  "name": "workos-stopwatch-guide",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-content.mjs && wrangler deploy --dry-run --outdir dist",
+    "start": "node server.mjs",
+    "dev": "npm run generate && wrangler dev",
+    "generate": "node scripts/build-content.mjs",
+    "check": "node --check server.mjs && node --check public/stopwatch/app.js && node --check src/release-assets.mjs && node --check scripts/build-drop.mjs",
+    "build:drop": "node scripts/build-drop.mjs",
+    "test": "npm run generate && vitest run",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@workos/alto": "^0.7.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.1.11",
+    "wrangler": "4.129.0"
+  }
+}

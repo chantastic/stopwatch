@@ -1,0 +1,10 @@
+{
+  "name": "StopWatch",
+  "icon": "⏱️",
+  "iconBackground": "#6554df",
+  "surfaces": {
+    "/": "web",
+    "/stopwatch": "public",
+    "/llms.txt": "public"
+  }
+}
