@@ -1,6 +1,6 @@
 # Offline conference badge
 
-Current scaffold direction, September 16, 2026. Active entrypoint is
+Current Settings release, September 17, 2026. Active entrypoint is
 `firmware/devices_badge/devices_badge.ino`, which includes `conference_app.h`.
 The prior connected AuthKit/voice application is retained in
 `legacy_connected_app.h` and Git history. It is not initialized or linked into
@@ -8,7 +8,7 @@ the conference application. No gateway changes are required.
 
 ## Pages and controls
 
-The five primary pages wrap in this fixed order:
+The six primary pages wrap in this fixed order:
 
 1. **init()**: lightweight looping wordmark/orbit preview, local clock, battery.
 2. **Schedule**: vertically scrollable, explicitly labeled placeholder rows.
@@ -18,9 +18,11 @@ The five primary pages wrap in this fixed order:
 4. **Badge**: manual name/photo, init() brand, selected network icon/label and QR.
    Swipe vertically through GitHub, X/Twitter and LinkedIn, including empty slots.
 5. **Hack your Badge**: real QR to `https://drop.workos.cloud/stopwatch`.
+6. **Settings**: battery percentage, brightness, local date/time, phone setup,
+   and orientation. All controls fit on one page; no settings scrolling is needed.
 
 The 468×468 framebuffer retains static side chevrons, top clock, bottom page
-name, and five dots. Useful content and QR quiet zones remain inside the round
+name, and six dots. Useful content and QR quiet zones remain inside the round
 aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
 remains editable in setup. Standard firmware fonts have limited glyph coverage.
 
@@ -42,11 +44,50 @@ tap. Long holds do not activate taps. Setup is modal: drags cannot change the
 hidden page, network, or schedule position. Rotation uses the established IMU
 axis mapping/filter and stays stable throughout touch.
 
+## Settings and current schedule item
+
+Brightness applies immediately in ten-percentage-point steps, bounded to 10–100%
+with a 50% default. The minimum maps to a nonzero display level. Brightness and
+orientation share one versioned NVS value in `conference_ui`; writes coalesce
+after 1.2 seconds without another change. The footer says `Saving settings...`
+while pending, and a failed write stays pending with a five-second retry.
+The existing selected-network preference remains separate. Changes made just
+before power loss may not have reached the delayed save yet.
+
+Orientation has exactly three choices: **Free** resumes calibrated automatic
+rotation in all four directions; **Default** fixes rotation 2, the normal lanyard
+pose; **180°** fixes rotation 0. Default is a named fixed pose, not the orientation
+at the moment of selection. The selected mode survives restart. Startup in Free
+begins at rotation 2 until fresh IMU readings settle. Switching modes clears old
+filter candidates and waits until navigation and physical touch are fully
+released before rotating. Pusher direction follows the displayed orientation.
+
+Battery is the percentage reported by the board driver, refreshed on Settings;
+an unavailable reading is labeled honestly. No remaining runtime or charging
+claim is inferred. Date/time uses the shared clock with its saved display offset,
+or `Date / time not set` when invalid. **Connect phone** opens the same temporary
+local setup used from Badge. Setup launched from Settings returns to Settings
+after Save, Cancel or timeout; successful setup launched elsewhere retains the
+prior return to Badge, and cancellation leaves its launch page selected.
+
+Schedule entries can carry explicit UTC start/end timestamps in
+`conference_schedule.h`. A valid clock highlights the first matching interval
+where `start <= now < end`, with an accent border and `Now /` label. Gaps, invalid
+intervals, invalid clocks and untimed rows have no current selection. Display
+timezone offsets never alter those UTC comparisons. Forward/backward clock
+corrections re-evaluate selection without moving the user's scroll position.
+The shipped placeholder rows remain untimed; no real agenda has been invented.
+
 ## Local customization
 
 Setup creates a temporary password-protected hotspot with a per-device SSID.
 Scan its Wi-Fi QR, then use the captive page or `http://192.168.4.1`.
 There is no internet requirement, station connection, scraping, or sign-in.
+On each page load, the browser automatically submits its current epoch and UTC
+offset to a separate authorized clock endpoint. Clock status and Retry are
+independent of Save badge. Each retry samples time again. A successful sync is
+kept even if the profile edits are cancelled; failed sync shows an error and
+does not silently save edits or close setup. See [the clock guide](conference-clock.md).
 The committed name and all three canonical profile URLs prefill the form.
 GitHub, X/Twitter and LinkedIn personal profile handles/HTTPS URLs are accepted;
 unrelated hosts, extra paths, control characters, and excessive input are rejected.
@@ -113,24 +154,31 @@ boundary as application flashing.
 `portal_status` reports transport counters, phases, bounded byte counts and close
 reasons, with separate last-POST evidence so captive probe GETs cannot overwrite
 it. It does not export request paths, headers, bodies, nonce or profile values.
-`status` includes the AP client count, without client identifiers.
+`status` includes the AP client count, without client identifiers, plus brightness,
+orientation mode, pending preference state/write count, page count, and current
+schedule index. A write count is per boot and is not a flash-wear measurement.
 
 Run `scripts/test.sh` and `scripts/build.sh`. New host checks cover gestures,
 scroll bounds, network isolation, URL/name/image limits, atomic-storage failures,
 portal commit/cancel/timeout behavior, and fresh RTC/batch acknowledgments.
+Settings checks cover brightness bounds/debounce, fixed modes, drag rejection,
+and schedule UTC boundaries/corrections. The actual rendered portal script is
+executed in host fixtures to verify fresh clock requests, offset signs and retry.
 The older host suites remain regression checks for retained connected code.
 Hardware verification results and limits belong in the dated report below;
 compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
 
-See the [dated verification report](conference-verification-2026-09-16.md).
-Generated logs and private captures stay under `.build/conference-verification/`.
-The working firmware has been flashed and its display/navigation/clock/radio
-checks pass. Actual device profile save/edit/photo persistence remains unverified
-because the workstation could not complete the AP browser flow reliably; the
-production portal/profile code passes host fixtures. Do not treat those fixtures
-as a completed phone or hardware profile test.
+See the [Settings verification report](conference-verification-2026-09-17.md)
+and the [earlier scaffold report](conference-verification-2026-09-16.md).
+Private Settings captures/results stay under `.build/settings-verification/`.
+Actual Settings persistence, rendering and input dispatch pass on the development
+board. Phone clock synchronization and device profile save/edit/photo persistence
+remain unverified: the bounded Settings attempt failed at workstation hotspot
+association, while the earlier AP/browser failures are documented separately.
+Production portal/profile/clock host fixtures pass; they are not a completed
+phone or hardware profile test.
 
 See [stock UI source research](stock-ui-reference.md) for the inspected framework,
 versions, MIT licensing, and the decision to reuse navigation patterns while

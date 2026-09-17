@@ -3,8 +3,8 @@
 #include "../firmware/devices_badge/conference_navigation.h"
 int main() {
   ConferenceNavigation n;
-  for (int i = 1; i <= 5; ++i) { n.nextPage(1); assert(int(n.page) == i % 5); }
-  for (int i = 4; i >= 0; --i) { n.nextPage(-1); assert(int(n.page) == i); }
+  for (int i = 1; i <= 6; ++i) { n.nextPage(1); assert(int(n.page) == i % 6); }
+  for (int i = 5; i >= 0; --i) { n.nextPage(-1); assert(int(n.page) == i); }
   n.page = ConferencePage::Badge;
   n.begin(234, 300, 0); n.move(236, 220);
   assert(n.end(236, 200, 200) == ConferenceGesture::Network);

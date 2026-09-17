@@ -4,8 +4,8 @@ An offline, locally configurable conference badge for the **M5Stack StopWatch**.
 The current scaffold uses the verified Arduino/M5Unified drivers and a 468×468
 round display. No internet, attendee account, cloud backend, or sign-in is needed.
 
-Five pages: **init() animation → Schedule → Developers After Dark → Badge →
-Hack your Badge**. Schedule, invite and animation artwork are visibly temporary.
+Six pages: **init() animation → Schedule → Developers After Dark → Badge →
+Hack your Badge → Settings**. Schedule, invite and animation artwork are visibly temporary.
 The Hack QR opens [drop.workos.cloud/stopwatch](https://drop.workos.cloud/stopwatch).
 
 Use the physical left/right pushers or on-screen arrows to page. Swipe vertically
@@ -18,6 +18,14 @@ Bluetooth off.
 In lanyard-up orientation, blue is previous and yellow is next. Completed taps,
 drag rejection and stable auto-rotation remain in place. Tap a configured badge
 to expand its QR; press both pushers to edit it.
+
+Settings shows battery percentage, persistent brightness, date/time and a
+**Connect phone** action. Orientation choices are **Free** (automatic),
+**Default** (lanyard-up), and **180°** (the opposite pose). Opening phone setup
+automatically synchronizes its fresh clock, independently of saving profile
+edits. A successful clock sync is retained even if those edits are cancelled.
+The actual phone flow still needs the acceptance check described in the
+[Settings verification report](docs/conference-verification-2026-09-17.md).
 
 ## Build and flash
 

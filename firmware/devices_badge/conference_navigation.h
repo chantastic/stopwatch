@@ -1,15 +1,16 @@
 #pragma once
 #include <stdint.h>
 #include <stdlib.h>
+#include "conference_schedule.h"
 
-enum class ConferencePage : uint8_t { Init, Schedule, AfterDark, Badge, Hack };
+enum class ConferencePage : uint8_t { Init, Schedule, AfterDark, Badge, Hack, Settings };
 enum class ConferenceGesture : uint8_t { None, Tap, Page, Network, Scroll };
 
 // Positions use the rendered orientation; M5GFX already transforms touch.
 class ConferenceNavigation {
  public:
-  static constexpr int PAGE_COUNT = 5, NETWORK_COUNT = 3;
-  static constexpr int SCHEDULE_ROWS = 6, ROW_HEIGHT = 78;
+  static constexpr int PAGE_COUNT = 6, NETWORK_COUNT = 3;
+  static constexpr int SCHEDULE_ROWS = CONFERENCE_AGENDA_COUNT, ROW_HEIGHT = 78;
   static constexpr int SCROLL_TOP = 130, SCROLL_BOTTOM = 378;
   static constexpr int MAX_SCROLL = SCHEDULE_ROWS * ROW_HEIGHT - (SCROLL_BOTTOM - SCROLL_TOP);
   ConferencePage page = ConferencePage::Init;

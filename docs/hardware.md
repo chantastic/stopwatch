@@ -1,7 +1,7 @@
 # Hardware and interaction notes
 
-> **Current application: offline conference scaffold (September 16, 2026).**
-> Read [conference-badge.md](conference-badge.md) for the current five-page UI,
+> **Current application: offline conference badge (September 17, 2026).**
+> Read [conference-badge.md](conference-badge.md) for the current six-page UI,
 > manual setup, radio policy and storage model, and
 > [conference-clock.md](conference-clock.md) for repeatable flashing.
 > The connected badge/voice behavior below is the retained historical application.

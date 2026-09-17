@@ -91,7 +91,7 @@ def main():
             page.locator('#cancel' if args.phase=='cancel' else '#save').click()
             page.locator('#form').wait_for(state='hidden',timeout=12000)
             message=page.locator('#status').inner_text()
-            assert ('Cancelled.' if args.phase=='cancel' else 'Saved on your badge.') in message
+            assert ('Profile changes cancelled.' if args.phase=='cancel' else 'Saved on your badge.') in message
             # Screenshot contains only the acknowledgment; form is hidden.
             page.screenshot(path=str(out/f'{args.phase}-phone-layout-ack.png'))
             report['ack_visible_before_ap_shutdown']=True

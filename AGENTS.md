@@ -19,7 +19,7 @@
 - Active firmware is the Arduino sketch in `firmware/devices_badge/`.
 - Current product is the **offline conference badge**. Read
   [conference-badge.md](docs/conference-badge.md) and
-  [conference-clock.md](docs/conference-clock.md). The five-page UI supersedes
+  [conference-clock.md](docs/conference-clock.md). The six-page UI supersedes
   the connected badge/voice controls below; that previous application is retained
   in `legacy_connected_app.h` and Git history and is not compiled into this build.
 - Normal operation has Wi-Fi and Bluetooth off. Temporary setup is AP-only,
@@ -28,6 +28,13 @@
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
   loop-up rotation 2 means blue previous / yellow next. Both open setup; either
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
+- Settings is the final page, after Hack your Badge. Brightness has a visible
+  minimum and delayed persistent saves. Orientation is exactly Free (automatic),
+  Default (rotation 2), or 180° (rotation 0); apply changes after touch release.
+  Phone setup synchronizes a fresh browser clock independently of profile Save
+  and Cancel. Settings-launched setup returns to Settings. Schedule intervals use
+  absolute UTC; untimed placeholders never become current. Keep all input/setup/
+  save deadlines on monotonic time, independent of clock corrections.
 - Build once for a batch; each flash provisions and verifies a fresh hardware RTC
   time and storage/radio readiness. Preserve the partition layout and user state.
   Every flash must first compare the current partition sector with the compiled

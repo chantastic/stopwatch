@@ -16,7 +16,7 @@ import time
 
 MIN_EPOCH = 1704067200
 MAX_EPOCH = 4102444800
-EXPECTED_BUILD = "conference-scaffold-1"
+EXPECTED_BUILD = "conference-settings-2"
 
 
 class ClockError(Exception):

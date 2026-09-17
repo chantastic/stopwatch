@@ -2,8 +2,52 @@
 
 The conference firmware keeps **UTC in the StopWatch's RX8130CE hardware RTC**
 and sets the ESP32 system clock from it on boot. The display adds a saved UTC
-offset. There is no Wi-Fi time service, compile-time clock, or saved timestamp
-used to guess elapsed time after power loss. An invalid clock displays `--:--`.
+offset. It can adopt the flashing computer's clock over USB or the phone/browser
+clock through its temporary local setup portal. There is no internet time
+service, compile-time clock, or saved timestamp used to guess elapsed time after
+power loss. An invalid clock displays `--:--`.
+
+## Phone synchronization and Settings
+
+Opening the authorized temporary portal sends the browser's current clock to
+the badge. The portal has a separate clock result and Retry action; success is
+shown only after hardware RTC and system-clock readback pass. This uses local
+Wi-Fi between the browser and badge and requires no internet or account sign-in.
+
+**Clock synchronization is independent of profile saving.** A successful clock
+sync takes effect immediately and survives closing setup or canceling profile
+edits. Cancel continues to discard uncommitted name/social/photo edits; it does
+not roll back a verified clock. A failed clock sync does not save the profile or
+close setup. The phone/browser is the time authority, so an incorrect phone
+clock or timezone produces an incorrect badge clock; there is no external clock
+service to correct it automatically.
+
+The dedicated `/clock` request passes the portal's session/nonce and bounded JSON
+checks before invoking `conferenceClockSyncPhone(input, response)`. Required
+values are integer Unix **UTC seconds** in 2024–2099 and integer `offset_minutes`
+from -840 through +840 **east of UTC**. JavaScript supplies
+`Math.floor(Date.now() / 1000)` and `-new Date().getTimezoneOffset()`; the minus
+sign matters because JavaScript's native offset uses the opposite convention.
+An optional timezone name is informational and is neither persisted nor used
+to calculate time. Missing, string, fractional, boolean, or out-of-range values
+are rejected before clock writes.
+
+The clock helper checks RTC writes/readback, offset persistence, system-clock
+readback, and agreement between the current system clock and RTC. Its response
+contains only `ok`, `valid`, `source`, UTC `epoch`, `rtc_epoch`, `offset_minutes`,
+and an error code on failure. It performs no profile writes or AP teardown.
+The last successful source is `phone` during that boot; a later reboot reports
+`rtc` after restoring the retained clock. Repeated synchronization with the same
+offset does not rewrite that NVS value.
+
+Settings reads the shared local-time helpers: `conferenceClockText()` (`HH:MM`),
+`conferenceClockDateText()` (`YYYY-MM-DD`), and
+`conferenceClockDateTimeText()` (`YYYY-MM-DD HH:MM`). They all apply the same
+saved offset, including day/year rollover. `conferenceClockEpoch()` returns
+UTC seconds (zero while invalid), `conferenceClockOffsetMinutes()` exposes
+the saved display offset, and `conferenceClockLocalTime()` supplies checked
+calendar fields without parsing display strings. Invalid clocks yield visible
+date/time placeholders.
 
 ## Flash one device
 
@@ -128,9 +172,9 @@ explicit offset, in minutes east of UTC:
 ./scripts/flash.sh --no-build --offset-minutes -420 /dev/cu.usbmodemYOUR_PORT
 ```
 
-Offsets are fixed until the next provision; this scaffold does **not** contain
+Offsets are fixed until the next USB or phone sync; this scaffold does **not** contain
 an IANA timezone database or automatically apply a future DST transition. Check
-the event's offset and reprovision if the devices cross a DST change. The accepted
+the event's offset and resync if the devices cross a DST change. The accepted
 clock range is 2024 through 2099; offsets are -840 through +840 minutes.
 
 Only reviewed source-built application components should be distributed.
@@ -223,7 +267,7 @@ unrelated, or oversized serial lines cannot satisfy verification.
 
 Finally the helper sends `{"op":"status","nonce":"<new hex nonce>"}` and
 requires a matching `CONFERENCE_STATUS` reply. This release expects build
-`conference-scaffold-1`, board `30`, flash `16777216`, PSRAM `8388608`,
+`conference-settings-2`, board `30`, flash `16777216`, PSRAM `8388608`,
 `store_ready`, `clock_valid`, and `rtc` all true; `setup` false; and both
 `wifi_mode` and `bluetooth` zero. A mounted existing manual profile is never
 cleared to satisfy readiness. Update the expected build alongside a future
@@ -283,6 +327,10 @@ Partition tests reject factory/corrupt/blank/truncated maps and changed compiled
 layouts. Batch orchestration tests prove all build modes and storage opt-in stop
 before upload on failed preflight. USB tests cover renumbering, missing/duplicate
 identity, and a different board taking the previous device path.
+Phone-clock tests cover strict field validation, east/west offset signs, local
+day/year rollover with UTC unchanged, reload, unchanged-offset write avoidance,
+and rejected RTC/system-clock readback or persistence failures. These are host
+simulations; they do not establish real-phone behavior by themselves.
 Run them through `scripts/test.sh`.
 The host tests do not access the board or measure retention, drift, or physical
 power behavior. Record actual device checks separately with the source version.

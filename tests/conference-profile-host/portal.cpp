@@ -2,6 +2,16 @@
 #include "check.cpp"
 #undef main
 #define ARDUINOJSON_ENABLE_ARDUINO_STRING 1
+#define CONFERENCE_CLOCK_TEST_EXTERNAL_STRING
+#include "M5Unified.h"
+#include <sys/time.h>
+static int portalSettimeofday(const timeval *value,const void*){testNow=value->tv_sec;return 0;}
+static time_t portalTime(time_t *value){if(value)*value=testNow;return testNow;}
+#define settimeofday portalSettimeofday
+#define time(...) portalTime(__VA_ARGS__)
+#include "../../firmware/devices_badge/conference_clock.h"
+#undef settimeofday
+#undef time
 #include "../../firmware/devices_badge/conference_portal.h"
 #include <chrono>
 #include <sys/ioctl.h>
@@ -52,6 +62,28 @@ struct WireClient {
 String getNonce(WireClient &web){web.get("/");assert(web.responseCode==200);std::string html=web.response.c_str();std::string prefix="const nonce='";auto start=html.find(prefix);assert(start!=std::string::npos);return html.substr(start+prefix.size(),32);}
 std::string form(const char *name,const char *github,const char *x,const char *linkedin,const char *image="keep",const String &token=""){
   JsonDocument json;json["name"]=name;json["github"]=github;json["x"]=x;json["linkedin"]=linkedin;json["image"]=image;json["imageToken"]=token;std::string body;serializeJson(json,body);return body;
+}
+void clockEndpointTests(ConferencePortal &portal,ConferenceProfileStore &store,WireClient &wire,const String &nonce){
+  const auto original=read(root+conference_store_detail::RECORD);const auto revision=store.revision();
+  const auto unchanged=[&](){assert(read(root+conference_store_detail::RECORD)==original&&store.revision()==revision&&portal.active()&&portal.outcome()==ConferencePortalOutcome::None);};
+  const std::string valid=R"({"epoch":1789651234,"offset_minutes":345,"timezone":"Asia/Kathmandu"})";
+  const auto originalClock=testNow;
+  wire.post("/clock",valid,"00000000000000000000000000000000");assert(wire.responseCode==403&&testNow==originalClock);unchanged();
+  for(const char *bad:{"[]","{}",R"({"epoch":"1789651234","offset_minutes":345})",R"({"epoch":1789651234.5,"offset_minutes":345})",
+    R"({"epoch":1789651234,"offset_minutes":true})",R"({"epoch":0,"offset_minutes":345})",R"({"epoch":1789651234,"offset_minutes":841})",
+    R"({"epoch":1789651234,"offset_minutes":345,"timezone":false})",R"({"epoch":1789651234,"offset_minutes":345,"timezone":"Asia/Kathmandu\u0000Other"})",
+    R"({"epoch":1789651234,"offset_minutes":345,"timezone":"Invalid zone"})",R"({"epoch":1789651234,"offset_minutes":345,"name":"Unexpected"})"}){
+    wire.post("/clock",std::string(bad),nonce);assert(wire.responseCode==400&&testNow==originalClock);unchanged();
+  }
+  wire.post("/clock",std::string(513,'x'),nonce);assert(wire.responseCode==413);unchanged();
+  wire.post("/clock",valid,nonce);assert(wire.responseCode==200);JsonDocument result;assert(!deserializeJson(result,wire.response.c_str()));
+  assert(result["ok"].as<bool>()&&result["valid"].as<bool>()&&std::string(result["source"].as<const char*>())=="phone"&&result["rtc_epoch"].as<int64_t>()==1789651234&&result["offset_minutes"].as<int>()==345);unchanged();
+  // A timezone name never overrides the explicit checked numerical offset.
+  wire.post("/clock",std::string(R"({"epoch":1789651234,"offset_minutes":345,"timezone":"Pacific/Honolulu"})"),nonce);
+  assert(wire.responseCode==200&&conference_clock::offsetMinutes==345);unchanged();
+  M5.Rtc.enabled=false;wire.post("/clock",valid,nonce);assert(wire.responseCode==400);assert(!deserializeJson(result,wire.response.c_str()));
+  assert(!result["ok"].as<bool>()&&std::string(result["error"].as<const char*>())=="rtc_unavailable");unchanged();M5.Rtc.enabled=true;
+  wire.post("/clock",valid,nonce);assert(wire.responseCode==200&&conferenceClockValid()&&conferenceClockEpoch()==1789651234);unchanged();
 }
 void beginUpload(WireClient &wire,const String &nonce,size_t length){
   wire.connect();wire.sendText("POST /image HTTP/1.1\r\nHost: 192.168.4.1\r\nContent-Length: "+std::to_string(length)+"\r\nContent-Type: image/jpeg\r\nX-Conference-Nonce: "+nonce.c_str()+"\r\n\r\n");wire.step();assert(wire.socket->descriptor>=0);
@@ -118,6 +150,9 @@ int main(int argc,char **argv){
   assert(gate("GET / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\n")==0);
   assert(gate("POST /save HTTP/1.1\r\nContent-Length: 200\r\nContent-Type: application/json\r\n\r\n")==0);
   assert(gate("POST /image HTTP/1.1\r\nContent-Length: 131072\r\nContent-Type: image/jpeg\r\n\r\n")==0);
+  assert(gate("POST /clock HTTP/1.1\r\nContent-Length: 512\r\nContent-Type: application/json\r\n\r\n")==0);
+  assert(gate("POST /clock HTTP/1.1\r\nContent-Length: 513\r\nContent-Type: application/json\r\n\r\n")==413);
+  assert(gate("POST /clock HTTP/1.1\r\nContent-Length: 20\r\nContent-Type: image/jpeg\r\n\r\n")==415);
   for(const char *method:{"PUT","PATCH","DELETE","OPTIONS"})assert(gate(std::string(method)+" /save HTTP/1.1\r\nContent-Length: 9999999\r\n\r\n")==405);
   assert(gate("POST /save HTTP/1.1\r\nContent-Length: 20\r\nContent-Type: multipart/form-data; boundary=x\r\n\r\n")==415);
   assert(gate("POST /save HTTP/1.1\r\nContent-Length: 2049\r\nContent-Type: application/json\r\n\r\n")==413);
@@ -139,12 +174,14 @@ int main(int argc,char **argv){
   web.post("/save",form("Alex","https://evil.example/user","",""),nonce);assert(web.responseCode==400&&store.profile().name.isEmpty());
   web.post("/save",std::string("{\"name\":\"Alex\\u0000Other\",\"github\":\"\",\"x\":\"\",\"linkedin\":\"\",\"image\":\"keep\",\"imageToken\":\"\"}"),nonce);assert(web.responseCode==400);
   web.post("/image",jpeg,nonce,"image/jpeg");assert(web.responseCode==200&&store.profile().name.isEmpty()&&!store.avatarPixels());JsonDocument uploaded;assert(!deserializeJson(uploaded,web.response.c_str()));String token=uploaded["imageToken"].as<String>();assert(!token.isEmpty());
+  clockEndpointTests(portal,store,web,nonce);
   renameFailed=true;web.post("/save",form("Alex","","@example","","staged",token),nonce);renameFailed=false;assert(web.responseCode==500&&store.profile().name.isEmpty()&&!store.avatarPixels()&&portal.active());
   web.post("/save",form("Alex <&\" Example","","@example","","staged",token),nonce);assert(web.responseCode==200&&store.profile().name=="Alex <&\" Example"&&store.avatarPixels());
   assert(portal.outcome()==ConferencePortalOutcome::Saved&&portal.active()&&WiFi.modeValue==WIFI_AP);
   testMillis+=2999;portal.tick();assert(portal.active());testMillis++;portal.tick();assert(!portal.active()&&WiFi.modeValue==WIFI_OFF&&portal.password().isEmpty());
   assert(portal.start());nonce=getNonce(web);assert(std::string(web.response.c_str()).find("Alex &lt;&amp;&quot; Example")!=std::string::npos);assert(std::string(web.response.c_str()).find("https://x.com/example")!=std::string::npos);
   web.post("/image",jpeg,nonce,"image/jpeg");assert(web.responseCode==200);web.post("/cancel",std::string("{}"),nonce);assert(web.responseCode==200&&portal.outcome()==ConferencePortalOutcome::Cancelled&&portal.active());testMillis+=3000;portal.tick();assert(!portal.active()&&store.profile().name=="Alex <&\" Example");
+  assert(conferenceClockValid()&&conferenceClockEpoch()==1789651234&&conference_clock::offsetMinutes==345);
   assert(portal.start());nonce=getNonce(web);web.post("/save",form("Edited","example","","","remove"),nonce);assert(web.responseCode==200&&!store.avatarPixels()&&store.profile().urls[1].isEmpty());portal.stop();assert(portal.outcome()==ConferencePortalOutcome::Saved);
   {ConferenceProfileStore restored;assert(restored.begin()&&restored.profile().name=="Edited"&&restored.profile().urls[0]=="https://github.com/example"&&restored.profile().urls[1].isEmpty()&&!restored.avatarPixels());}
   assert(portal.start());nonce=getNonce(web);web.post("/image",std::vector<uint8_t>{},nonce,"image/jpeg",128*1024+1);assert(web.responseCode==413&&portal.active());

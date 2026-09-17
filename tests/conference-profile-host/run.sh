@@ -18,6 +18,7 @@ done
 "$OUT/check" "$OUT/synthetic.jpg" "$OUT/oversize.jpg"
 "${CXX:-clang++}" -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Wno-deprecated-declarations \
   -I"$ROOT/tests/conference-profile-host/include" -I"$ROOT/tests/profile-store-test/include" \
+  -I"$ROOT/tests/conference-clock-host" \
   -I"${ARDUINOJSON_INCLUDE:-$HOME/Documents/Arduino/libraries/ArduinoJson/src}" \
   "$ROOT/tests/conference-profile-host/portal.cpp" -o "$OUT/portal"
 "$OUT/portal" "$OUT/synthetic.jpg" "$OUT/setup.html"
@@ -30,3 +31,4 @@ assert script, 'Rendered setup page has no client script'
 (out/'setup.js').write_text(script[1])
 PY
 node --check "$OUT/setup.js"
+node "$ROOT/tests/conference-profile-host/browser-clock.cjs" "$OUT/setup.js"

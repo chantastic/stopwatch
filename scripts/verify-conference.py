@@ -27,7 +27,7 @@ class Device:
         return json.loads(self.response(b"CONFERENCE_STATUS "))
     def page(self,target):
         state=self.status()
-        for _ in range(5):
+        for _ in range(6):
             if state["page"]==target:return state
             state=self.action({"op":"page","step":1})
         raise AssertionError("Page not reachable")
@@ -83,21 +83,21 @@ def main():
             assert not state['configured_mask'] and not state['avatar'] and not state['name_present'], 'Refuse to capture/test a nonempty personal profile'
             d.page(0);frame=d.capture(out/'00-init.png');time.sleep(.3)
             later=d.capture(out/'00-init-later.png');assert frame.tobytes()!=later.tobytes();report['animation_changes']=True
-            names=['init()','Schedule','After Dark','Badge','Hack your Badge']
+            names=['init()','Schedule','After Dark','Badge','Hack your Badge','Settings']
             for index,name in enumerate(names):
                 d.page(index);picture=d.capture(out/f'{index:02d}-page.png');images.append((name,picture))
                 decoded=qr(picture)
                 if index==4: assert decoded==(['https://drop.workos.cloud/stopwatch'],['https://drop.workos.cloud/stopwatch'])
                 if index in (2,3): assert decoded==([],[]), 'Unexpected QR on placeholder'
-            sheet(images,out/'five-pages.png')
+            sheet(images,out/'six-pages.png')
             state=d.page(0)
             for step in (1,-1):
-                for _ in range(5):
-                    expected=(state['page']+step)%5;state=d.action({'op':'page','step':step});assert state['page']==expected
+                for _ in range(6):
+                    expected=(state['page']+step)%6;state=d.action({'op':'page','step':step});assert state['page']==expected
             for value in ('blue','yellow'):
                 before=d.status();reverse=before['rotation']==2
                 direction=(-1 if reverse else 1)*(1 if value=='blue' else -1)
-                state=d.action({'op':'button','value':value});assert state['page']==(before['page']+direction)%5
+                state=d.action({'op':'button','value':value});assert state['page']==(before['page']+direction)%6
             d.page(1);d.swipe(234,360,234,145);state=d.swipe(234,360,234,145)
             assert state['scroll']==state['scroll_max'];d.capture(out/'schedule-last-row.png')
             d.swipe(234,145,234,360);state=d.swipe(234,145,234,360);assert state['scroll']==0

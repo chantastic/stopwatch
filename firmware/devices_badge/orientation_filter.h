@@ -9,6 +9,9 @@ class OrientationFilter {
   uint8_t rotation() const { return rotation_; }
 
   void invalidate() { haveSample_=false;candidate_=-1; }
+  // Use only after touch release when explicitly choosing a fixed orientation
+  // or returning to automatic rotation. Fresh samples must settle again.
+  void reset(uint8_t rotation) { rotation_ = rotation & 3; invalidate(); }
 
   bool update(float x,float y,float z,uint32_t now,bool touching) {
     const float norm=x*x+y*y+z*z;

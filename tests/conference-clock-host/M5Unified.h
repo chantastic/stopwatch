@@ -5,8 +5,11 @@
 #include <ctime>
 #include <algorithm>
 
+#ifndef CONFERENCE_CLOCK_TEST_EXTERNAL_STRING
 using String = std::string;
+#endif
 inline int64_t testNow = 1789560000;
+inline int64_t testRtcTicks = 0;
 struct SerialFake {
   std::string output;
   void print(const char* value) { output += value; }
@@ -26,13 +29,13 @@ struct rtc_datetime_t {
 };
 struct FakeRtc {
   uint8_t memory[128] = {};
-  bool readable = true, writable = true, raw = false;
-  int64_t epoch = 1789560000, setAt = 1789560000;
+  bool readable = true, writable = true, raw = false, ignoreCalendarWrite = false;
+  int64_t epoch = 1789560000, setAt = 0;
   uint8_t getAddress() { return 0x32; }
   bool readRegister(uint8_t reg, uint8_t* data, size_t count) {
     if (!readable) return false;
     if (reg == 0x10 && !raw) {
-      time_t value = epoch + testNow - setAt;
+      time_t value = epoch + testRtcTicks - setAt;
       tm utc;
       gmtime_r(&value, &utc);
       auto bcd=[](int v)->uint8_t{return (v/10)*16+v%10;};
@@ -50,9 +53,10 @@ struct FakeRtc {
   bool writeRegister8(uint8_t reg,uint8_t value) {return writeRegister(reg,&value,1);}
   bool setDateTime(const rtc_date_t* date,const rtc_time_t* clock) {
     if (!writable) return false;
+    if (ignoreCalendarWrite) return true;
     tm t={};t.tm_year=date->year-1900;t.tm_mon=date->month-1;t.tm_mday=date->date;
     t.tm_hour=clock->hours;t.tm_min=clock->minutes;t.tm_sec=clock->seconds;
-    epoch=timegm(&t);setAt=testNow;raw=false;
+    epoch=timegm(&t);setAt=testRtcTicks;raw=false;
     return true;
   }
 };

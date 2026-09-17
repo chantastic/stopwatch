@@ -27,8 +27,8 @@ static inline int inspect(const char *bytes,size_t length,Request *parsed=nullpt
   const char *url=space+1,*last=static_cast<const char*>(memchr(url,' ',first-url));if(!last||last==url||last-url>384||url[0]!='/')return 400;
   if(!equal(last+1,first-last-1,"HTTP/1.1")&&!equal(last+1,first-last-1,"HTTP/1.0"))return 400;
   for(const char *p=url;p<last;p++)if(uint8_t(*p)<=32||uint8_t(*p)>=127)return 400;
-  bool image=equal(url,last-url,"/image"),save=equal(url,last-url,"/save"),cancel=equal(url,last-url,"/cancel");
-  if(post&&!image&&!save&&!cancel)return 404;
+  bool image=equal(url,last-url,"/image"),save=equal(url,last-url,"/save"),cancel=equal(url,last-url,"/cancel"),clock=equal(url,last-url,"/clock");
+  if(post&&!image&&!save&&!cancel&&!clock)return 404;
   Request result;result.post=post;memcpy(result.path,url,last-url);
   bool seenLength=false,seenType=false,seenNonce=false,seenHost=false;size_t bodyLength=0;bool correctType=false;
   const char *line=first+2;
@@ -62,7 +62,7 @@ static inline int inspect(const char *bytes,size_t length,Request *parsed=nullpt
   if(get){if(bodyLength)return 413;}
   else {
     if(!seenLength||!bodyLength)return 411;
-    if(bodyLength>(image?128*1024:2048))return 413;
+    if(bodyLength>(image?128*1024:clock?512:2048))return 413;
     if(!seenType||!correctType)return 415;
   }
   result.bodyLength=bodyLength;if(parsed)*parsed=result;

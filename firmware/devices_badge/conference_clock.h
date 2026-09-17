@@ -68,7 +68,7 @@ inline bool setSystem(int64_t epoch) {
   return settimeofday(&value, nullptr) == 0;
 }
 
-inline const char* provision(int64_t epoch, int offset) {
+inline const char* provision(int64_t epoch, int offset, const char* adoptedSource = "computer") {
   if (!validEpoch(epoch) || !validOffset(offset)) return "invalid_value";
   auto* rtc = M5.Rtc.getRtcInstancePtr();
   if (!rtc || rtc->getAddress() != 0x32) return "rtc_unavailable";
@@ -99,9 +99,11 @@ inline const char* provision(int64_t epoch, int offset) {
   prefs.end();
   if (!saved) return "offset_store_failed";
   if (!setSystem(readback)) return "system_clock_failed";
+  int64_t systemReadback = int64_t(time(nullptr));
+  if (systemReadback < readback || systemReadback > readback + 1) return "system_clock_failed";
   offsetMinutes = offset;
   valid = true;
-  source = "computer";
+  source = adoptedSource;
   return nullptr;
 }
 }  // namespace conference_clock
@@ -121,16 +123,67 @@ inline void conferenceClockBegin() {
   if (readRtc(epoch) && setSystem(epoch)) { valid = true; source = "rtc"; }
 }
 
-inline bool conferenceClockValid() { return conference_clock::valid; }
+inline bool conferenceClockValid() {
+  return conference_clock::valid && conference_clock::validEpoch(int64_t(time(nullptr)));
+}
 inline const char* conferenceClockSource() { return conference_clock::source; }
+inline int conferenceClockOffsetMinutes() { return conference_clock::offsetMinutes; }
+inline int64_t conferenceClockEpoch() { return conferenceClockValid() ? int64_t(time(nullptr)) : 0; }
+inline bool conferenceClockLocalTime(tm& result) {
+  if (!conferenceClockValid()) return false;
+  time_t local = static_cast<time_t>(conferenceClockEpoch() + int64_t(conferenceClockOffsetMinutes()) * 60);
+  return gmtime_r(&local, &result) != nullptr;
+}
 inline String conferenceClockText() {
-  if (!conference_clock::valid) return "--:--";
-  time_t local = time(nullptr) + conference_clock::offsetMinutes * 60;
   tm result = {};
-  if (!gmtime_r(&local, &result)) return "--:--";
+  if (!conferenceClockLocalTime(result)) return "--:--";
   char text[6];
   snprintf(text, sizeof(text), "%02d:%02d", result.tm_hour, result.tm_min);
   return String(text);
+}
+inline String conferenceClockDateText() {
+  tm result = {};
+  if (!conferenceClockLocalTime(result)) return "---- -- --";
+  char text[11];
+  if (!strftime(text, sizeof(text), "%Y-%m-%d", &result)) return "---- -- --";
+  return String(text);
+}
+inline String conferenceClockDateTimeText() {
+  tm result = {};
+  if (!conferenceClockLocalTime(result)) return "---- -- -- --:--";
+  char text[17];
+  if (!strftime(text, sizeof(text), "%Y-%m-%d %H:%M", &result)) return "---- -- -- --:--";
+  return String(text);
+}
+
+// Called only after the temporary portal authorizes its local session/nonce.
+// Clock adoption is committed independently of profile save/cancel. This helper
+// never reads or writes profiles, changes AP state, or records a timezone name.
+inline bool conferenceClockSyncPhone(JsonDocument& input, JsonDocument& response) {
+  using namespace conference_clock;
+  const char* error = nullptr;
+  if (!input["epoch"].is<int64_t>() || !input["offset_minutes"].is<int>()) error = "invalid_value";
+  else error = provision(input["epoch"].as<int64_t>(), input["offset_minutes"].as<int>(), "phone");
+  int64_t rtcEpoch = 0;
+  bool rtcValid = readRtc(rtcEpoch);
+  if (!rtcValid) { valid = false; source = "unset"; }
+  bool currentValid = conferenceClockValid() && rtcValid;
+  int64_t systemEpoch = conferenceClockEpoch();
+  if (!error && (!currentValid || systemEpoch < rtcEpoch - 1 || systemEpoch > rtcEpoch + 1)) {
+    error = "clock_verify_failed";
+    valid = false;
+    source = "unset";
+    currentValid = false;
+  }
+  response.clear();
+  response["ok"] = error == nullptr && currentValid;
+  response["valid"] = currentValid;
+  response["source"] = source;
+  response["epoch"] = currentValid ? systemEpoch : 0;
+  response["rtc_epoch"] = rtcValid ? rtcEpoch : 0;
+  response["offset_minutes"] = offsetMinutes;
+  if (error) response["error"] = error;
+  return error == nullptr && currentValid;
 }
 
 // Returns true when the caller should stop dispatching this serial command.
