@@ -79,3 +79,27 @@ After Dark. No saved state was reset to manufacture a fresh-device test.
 Private evidence: `.build/after-dark-date-{build,flash}.log` and
 `.build/after-dark-verification/date-correction.json`. Public release and website
 pins remain unchanged.
+
+
+## Direct update from the personal repository
+
+The user made `chantastic/stopwatch` the source of truth and requested direct
+updates instead of pull requests. The combined source at `ab9ec9c37f4141d7600c44a9a143c6a71a5ccd1d`
+was built and installed from `/Users/chan/Developer/stopwatch` on September 17.
+Application SHA-256: `ec653defcb991b9aad31cce54bfdf405640e1ea0611b097480c0afe23efcaa1e`.
+
+The full host regression suite and native build passed; 93 browser and 57 site
+tests passed for the combined source. The normal flash wrapper verified the
+existing partition sector, verified each uploaded component, synchronized a
+fresh computer time, and ended with `UNIT_READY`. Storage initialization was
+false: no profile storage or NVS erase was requested.
+
+Fresh before/after status retained the configured-account, name/avatar-presence,
+brightness, orientation-mode, network-choice, and saved-unlock indicators.
+Storage and both clocks were ready, Wi-Fi/Bluetooth were off, and UI ticks
+advanced across consecutive status samples. This confirms USB/software readiness,
+not a new physical touch/alignment test or a fresh locked-badge test. Personal
+pages were not captured.
+
+Private evidence: `.build/direct-device-update/`. This device update does not
+publish new release assets or deploy the website.
