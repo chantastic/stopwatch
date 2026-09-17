@@ -41,7 +41,8 @@
   Never apply calibration, save touch data, or start networking from this test.
   The current global touch-scale trial in `conference_touch_scale.h` applies
   once after M5GFX conversion to both normal input and the test marker. Keep
-  correction axes/origin consistent across rotations; raw readouts and injected
+  native correction axes/origin consistent across rotations, then apply the
+  separate screen-relative residual once; raw readouts and injected
   UI-coordinate diagnostics stay unchanged. See hardware.md for fit limitations.
   Label simulated inputs; they cannot verify physical sensor alignment.
 - Build once for a batch; each flash provisions and verifies a fresh hardware RTC

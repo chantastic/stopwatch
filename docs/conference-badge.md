@@ -96,14 +96,17 @@ save touch data, or start Wi-Fi or Bluetooth.
 
 The live marker uses a copy of M5Unified's raw sample transformed once by M5GFX,
 then the same continuous scale correction used by normal physical controls.
-The current provisional fit is described in [hardware notes](hardware.md#continuous-scale-trial).
+The current provisional fit retains the measured scales, rotates the native
+offset with the hardware, and applies a separate screen-relative offset last.
+See the [hardware notes](hardware.md#combined-offset-trial) for the fit and limits.
 The test itself does not create/save a calibration. Normal gesture coordinates
 can remain latched until the flick threshold.
 Serial `touch` input exercises the test display but is labeled **Simulated input**.
 It verifies dispatch and rendering, not sensor alignment. Physical alignment
 and any remaining offset still require the user's observation on the device.
 `touch_test_status` returns active/pressed/sample flags, sensor-versus-simulated
-source, corrected screen/raw coordinates, held rotation, `scale_trial`, and an optional valid hex nonce.
+source, corrected screen/raw coordinates, held rotation, `scale_trial`,
+`touch_model` (`scale-offset-2` for the combined-offset trial), and an optional valid hex nonce.
 It reads only the temporary test state and does not activate the test.
 
 ## Local customization

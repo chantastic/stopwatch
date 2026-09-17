@@ -223,7 +223,7 @@ static void conferenceSettingsView() {
 static void conferenceTouchTestView() {
   auto &d = M5.Display;
   conferenceText("Touch test", 234, 54, &fonts::FreeSansBold12pt7b);
-  conferenceText("Touch targets / scale correction on", 234, 82, &fonts::Font0, DIM);
+  conferenceText("Touch targets / scale + offset", 234, 82, &fonts::Font0, DIM);
   const int points[][2] = {{234, 120}, {234, 234}, {234, 362}, {112, 234}, {356, 234}};
   for (const auto &point : points) {
     d.drawCircle(point[0], point[1], 14, TFT_WHITE);
@@ -367,6 +367,7 @@ static void conferenceTouchTestStatus(const char *nonce) {
   status["raw_x"] = touchTest.rawX; status["raw_y"] = touchTest.rawY;
   status["rotation"] = touchTest.rotation;
   status["scale_trial"] = true;
+  status["touch_model"] = CONFERENCE_TOUCH_MODEL;
   status["nonce"] = conference_clock::validNonce(nonce) ? nonce : "";
   Serial.print("TOUCH_TEST_STATUS "); serializeJson(status, Serial); Serial.println();
 }

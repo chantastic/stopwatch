@@ -204,9 +204,9 @@ original coordinates and thresholds; application release semantics are retained.
 
 This is a provisional trial for the observed development board. Upper/bottom
 aiming was user-confirmed; the side/center region labels were inferred. The
-Default-orientation follow-up below supports the correction; physical comparison
-in 180° is still needed. These coefficients are not a validated default for the
-roughly 400-unit batch.
+Default-orientation follow-up below supports the correction; the subsequent
+180° comparison exposes a remaining downward bias. These coefficients are not
+a validated default for the roughly 400-unit batch.
 
 ### Physical follow-up with the scale correction
 
@@ -231,6 +231,123 @@ do not yet warrant another adjustment without a controlled labeled-target test.
 No firmware/settings changed during observation; the serial observer closed.
 Private evidence: `.build/touch-test-verification/live-20260917-092455.jsonl`
 and `tap-comparison-20260917-092455.json` in that directory.
+
+### Physical 180° follow-up
+
+On the same firmware `213a527`, the user reported that all targets felt low in
+180°/rotation 2. Two initial captures contained only retained samples; the next
+60-second capture collected 58 new physical press/release pairs, all in rotation
+2 with the scale correction enabled. The initial retained sample and one
+unpaired changed release were excluded. Nearest-crosshair assignment gives:
+
+| Target | Taps | Median horizontal error | Median vertical error |
+| --- | --- | --- | --- |
+| Top | 7 | +5 px | +22 px |
+| Center | 18 | -7 px | +16.5 px |
+| Bottom | 9 | +6 px | +29 px |
+| Left | 11 | -9 px | +19 px |
+| Right | 13 | -2 px | +6 px |
+
+Positive errors are right/down. All five vertical medians confirm a downward
+bias, but its magnitude varies by target and individual tap. Median target
+distance is 18.2 pixels versus 10.0 in the corrected Default pass; per-target
+comparisons are more informative because tap counts differ. Targets remain
+inferred and fingertip locations were not independently measured. These results
+do not establish a new calibration or its cause. Keep the current coefficients
+for comparison while investigating the residual; physical quarter-turn passes
+were still outstanding at that point. Neither firmware nor settings changed during this capture,
+and the observer closed afterward.
+
+Private evidence: `.build/touch-test-verification/live-20260917-094235.jsonl`
+and `orientation-comparison-20260917-094235.json` in the same directory. The
+earlier `093231` and `093346` captures contain no fresh physical taps and are
+not alignment evidence.
+
+### Controlled center test across four orientations
+
+On September 17 with unchanged firmware `213a527`, a guided test collected five
+physical center presses in each of these passes: 180°, Default, loop-left
+sideways (rotation 3), loop-right sideways (rotation 1), then 180° again. The
+user was instructed to keep the support, finger, viewing angle and approach
+consistent and hold/lift for about one second. The USB observer required the
+expected frozen rotation, recorded raw/corrected sensor positions, and closed
+after five press/release pairs. An initial attempt mixed short taps and missed
+presses; it was excluded and the first pass repeated. All 25 formal presses
+passed the capture checks, with observed holds of 0.45–0.88 seconds.
+
+Every intended target was the center `(234, 234)`, explicitly prescribed rather
+than inferred from nearest position. Each press contributes its median held
+position; each pass summarizes those five independent contacts. Medians below
+are relative to the displayed center, with positive directions right/down:
+
+| Pass | Rotation | Median horizontal error | Median vertical error |
+| --- | --- | --- | --- |
+| Initial 180° | 2 | +5 px | +23 px |
+| Default | 0 | -3 px | +5 px |
+| Loop left | 3 | +17 px | +19 px |
+| Loop right | 1 | -7 px | +20 px |
+| Repeated 180° | 2 | +1 px | +25 px |
+
+The repeated 180° median differs by (-4, +2) pixels, supporting a repeatable
+orientation-related effect at the center. The downward error is already
+present at first contact and during the hold; lifting the finger does not
+explain it. The sideways horizontal error changes sign while the vertical
+error stays downward. Thus neither one constant screen-relative vector nor
+one constant sensor-relative vector describes all four poses well.
+
+A descriptive fit giving each orientation equal weight (averaging the two
+180° pass medians) separates a screen-relative vector `(2.5, 17)` from a native
+vector `(-1.75, -10.75)` rotated with the display. Vector RMS residual is 3.95
+pixels, versus 11.59 for a single screen-relative vector or 17.63 for a single
+native vector. This combined model has more parameters and only four orientation
+medians; it does not establish cause,
+edge scaling, or a new calibration. Contact technique and device effects remain
+possible contributors. The approximately one-pixel movement of the displayed
+center under rotation is handled by transforming both points and targets.
+
+No firmware or calibration changed during the test; orientation settings were
+changed by the user for the prescribed passes. Observation finished with the
+test open in 180° and the serial port closed. Private evidence is under
+`.build/touch-test-verification/`: formal `center-*` JSONL/summary files at
+`100010`, `100045`, `100132`, `100208`, and `100254`, and the independent
+`controlled-center-independent-final.json` analysis. All 25 held-position
+summaries were independently reconstructed from the captured polls. The `095911` short-tap
+attempt is excluded. The read-only capture helper is `.build/observe-center-pass.py`.
+
+### Combined-offset trial
+
+The next implementation retains the original scales and separates the fitted
+native residual `n=(-1.75, -10.75)` from the screen residual `d=(2.5, 17)`.
+Relative to the prior unrounded mapping, the new point is `old - R(n) - d`,
+where `R` rotates a vector with the display. In `conference_touch_scale.h`,
+subtracting `n` is folded into the native offsets before rotating the affine
+correction, and `d` is subtracted after rotation. Both coordinates round once
+at the end. The already-rotated driver input is not rotated a second time.
+
+The resulting changes from the old unrounded mapping are rotation 0
+`(-0.75, -6.25)`, rotation 1 `(+8.25, -18.75)`, rotation 2 `(-4.25, -27.75)`,
+and rotation 3 `(-13.25, -15.25)` pixels. These follow one shared model; they
+are not independently fitted per-orientation or per-button adjustments. Scales,
+gesture thresholds, release handling, raw readouts, and synthetic UI inputs
+remain unchanged. Normal input and the test marker share the same mapping.
+`touch_test_status` exposes `touch_model: "scale-offset-2"` to distinguish new
+physical captures from the preceding scale-only observations.
+
+Host checks exercise the offset changes over and outside the screen, unchanged
+scales, monotonicity, no clamping, and rotation covariance after restoring the
+screen term. These verify the mathematical implementation, not physical
+alignment. Fresh center and edge checks remain required; no batch-wide validity
+is inferred from this one board/user fit.
+
+The September 17 candidate passed the complete host suite, pinned firmware
+build, and independent math/source review. The 1,307,375-byte application has
+SHA-256 `9987f153696f41e7fe638e15dc8d11773504e4952dbe306567a19cbe83e4a09a`.
+The ordinary uploader verified the existing partition layout and programmed
+data, then freshly provisioned/verified the RTC and returned `UNIT_READY` with
+`storage_initialized: false`. Live diagnostics confirmed `scale-offset-2`,
+mounted storage, valid time, both radios off, and a freshly opened 180° test.
+The physical repeat is pending; upload and synthetic modal entry do not qualify
+alignment. Private logs: `.build/touch-offset-{tests,build,flash}.log`.
 
 ## Build target, USB, and flash layout
 

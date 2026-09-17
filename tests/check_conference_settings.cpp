@@ -7,13 +7,6 @@
 #include "../firmware/devices_badge/orientation_filter.h"
 
 int main() {
-  // Measured region medians reduce error with one continuous transform, rather
-  // than snapping to a target. Both axes shrink; the top remains near its target.
-  const int measured[][4] = {{234,119,234,120}, {92,264,112,234}, {249,257,234,234}, {386,257,356,234}, {238,401,234,362}};
-  for (const auto &p : measured) {
-    auto corrected = conferenceScaleTouch(p[0], p[1], 0);
-    assert(abs(corrected.x-p[2]) <= 8 && abs(corrected.y-p[3]) <= 7);
-  }
   auto rotate = [](ConferenceTouchPoint p, int rotation) {
     switch (rotation) {
       case 1: return ConferenceTouchPoint{p.y, 467-p.x};
@@ -22,13 +15,33 @@ int main() {
       default: return p;
     }
   };
-  // A physical point has the same correction in every display orientation.
+  // The new model preserves the original scale and shifts the old unrounded
+  // map by these measured residuals. These are fit regressions, not fresh
+  // physical validation. Translation stays constant across the entire plane.
+  const float change[][2]={{-.75f,-6.25f},{8.25f,-18.75f},{-4.25f,-27.75f},{-13.25f,-15.25f}};
   for (int x=-100;x<=560;x+=11) for (int y=-100;y<=560;y+=13) {
     auto corrected = conferenceScaleTouch(x,y,0);
+    const float oldX=.82758047844f*x+35.54620127f;
+    const float oldY=.85758081377f*y+14.17202075f;
+    const float oldRotated[][2]={{oldX,oldY},{oldY,467-oldX},{467-oldX,467-oldY},{467-oldY,oldX}};
     for (int r=0;r<4;++r) {
-      auto input=rotate({x,y},r), expected=rotate(corrected,r);
+      auto input=rotate({x,y},r);
       auto actual=conferenceScaleTouch(input.x,input.y,r);
-      assert(abs(actual.x-expected.x)<=1 && abs(actual.y-expected.y)<=1);
+      assert(fabsf(actual.x-(oldRotated[r][0]+change[r][0]))<=.501f);
+      assert(fabsf(actual.y-(oldRotated[r][1]+change[r][1]))<=.501f);
+      // Remove the final screen-frame term before checking rotation covariance.
+      // Use doubled coordinates so the 2.5-pixel term is represented exactly.
+      auto withScreenRestored=ConferenceTouchPoint{2*corrected.x+5,2*corrected.y+34};
+      auto expected=rotate(withScreenRestored,r);
+      // rotate() reflects about 467; doubled coordinates reflect about 934.
+      if (r==2 || r==3) expected.x+=467;
+      if (r==1 || r==2) expected.y+=467;
+      assert(abs(2*actual.x+5-expected.x)<=2);
+      assert(abs(2*actual.y+34-expected.y)<=2);
+      auto alongX=conferenceScaleTouch(input.x+100,input.y,r);
+      auto alongY=conferenceScaleTouch(input.x,input.y+100,r);
+      assert(abs(alongX.x-actual.x-((r&1)?86:83))<=1 && alongX.y==actual.y);
+      assert(abs(alongY.y-actual.y-((r&1)?83:86))<=1 && alongY.x==actual.x);
     }
     auto next=conferenceScaleTouch(x+12,y+12,0);
     assert(next.x>corrected.x && next.y>corrected.y);
