@@ -1,0 +1,27 @@
+# WorkOS init() StopWatch
+
+> A human and agent reference for M5Stack StopWatch C152 dev kits. This board uses ESP32-S3R8 and a 466 × 466 round AMOLED. Do not confuse it with Waveshare round-display boards.
+
+## Local guide
+
+- [Human reference](/): Setup, hardware, project links, and recovery resources. Alto sign-in required at the subdomain root.
+- [Public reference](/stopwatch): The same page without sign-in.
+- [Conference badge installer](/stopwatch/install/): Install the alpha conference badge from desktop Chrome using USB. The installer checks the exact board layout and verifies the badge clock after restart.
+- [Report a badge issue](https://github.com/chantastic/m5stack-stopwatch-authkit/issues/new): Include the build ID and steps to reproduce.
+- [Agent skill](/stopwatch/SKILL.md): Board context, Arduino setup, revision-specific cautions, and task-specific primary sources. Read this first when helping with firmware.
+
+## Primary sources
+
+- [Hardware and pin maps](https://docs.m5stack.com/en/core/StopWatch)
+- [Arduino quick-start](https://docs.m5stack.com/en/arduino/stopwatch/program)
+- [Display example and minimum versions](https://docs.m5stack.com/en/arduino/stopwatch/display)
+- [Factory recovery](https://docs.m5stack.com/en/guide/restore_factory/stopwatch)
+- [M5Unified](https://github.com/m5stack/M5Unified)
+- [M5GFX](https://github.com/m5stack/M5GFX)
+
+## Community
+
+- [StopWatch Couch to 5K](https://esptember.com/day/day-12-c25k/)
+- [ESPtember agent index](https://esptember.com/llms.txt)
+
+Hardware sources reviewed 2026-09-16. The conference installer identifies its release and verification limits separately. The general hardware guide was not qualified by flashing a physical kit.

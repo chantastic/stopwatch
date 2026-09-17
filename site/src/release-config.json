@@ -1,0 +1,10 @@
+{
+  "repository": "chantastic/m5stack-stopwatch-authkit",
+  "tag": "conference-factory-3",
+  "assets": [
+    { "name": "release.json", "sizeBytes": 4251, "sha256": "0f2358ac3f6e57dae0936df9d7171a2de01654d5c61f24262aea30bf77f8ecb1" },
+    { "name": "bootloader.bin", "sizeBytes": 22272, "sha256": "ce733497031906a3db1ffacc8d57fb6cb4854ebb615435cf7df7185dbc578261" },
+    { "name": "partition-table.bin", "sizeBytes": 3072, "sha256": "ace02503447d0f470692e65fa76002f2d77a92dc81cd3813d8aa66718d716da9" },
+    { "name": "firmware.bin", "sizeBytes": 1676960, "sha256": "78e3c38b36cd4a1a75fd49c707f4796b522d03bfbc28fa4ca83c7c8b966cce73" }
+  ]
+}

@@ -1,0 +1,15 @@
+node_modules/
+/dist/
+/.alto-bundle/
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
+*.tsbuildinfo
+worker-configuration.d.ts
+.DS_Store
+
+src/content.generated.ts
+.build/
+*.bin

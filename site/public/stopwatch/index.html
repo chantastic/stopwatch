@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141619" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Technical reference for the M5Stack StopWatch dev kits at WorkOS init(). Setup, hardware specifications, projects, and an agent-readable skill.">
+  <title>StopWatch — WorkOS init() technical reference</title>
+  <link rel="canonical" href="https://stopwatch.workos.cloud/stopwatch">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WorkOS init()">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:title" content="StopWatch — WorkOS init()">
+  <meta property="og:description" content="Setup, hardware specifications, example projects, and an agent-ready skill for the M5Stack StopWatch dev kit.">
+  <meta property="og:url" content="https://stopwatch.workos.cloud/stopwatch">
+  <meta property="og:image" content="https://stopwatch.workos.cloud/stopwatch/og.png?v=2">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Official WorkOS and init() logos beside StopWatch development kit reference text and a head-on black stopwatch with rectangular yellow and blue pusher buttons.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="StopWatch — WorkOS init()">
+  <meta name="twitter:description" content="Setup, hardware specifications, example projects, and an agent-ready skill for the M5Stack StopWatch dev kit.">
+  <meta name="twitter:image" content="https://stopwatch.workos.cloud/stopwatch/og.png?v=2">
+  <meta name="twitter:image:alt" content="Official WorkOS and init() logos beside StopWatch development kit reference text and a head-on black stopwatch with rectangular yellow and blue pusher buttons.">
+  <link rel="stylesheet" href="/stopwatch/style.css">
+  <link rel="alternate" type="text/markdown" href="/stopwatch/SKILL.md" title="StopWatch agent skill">
+  <script src="/stopwatch/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="masthead">
+    <a class="brand" href="#main" aria-label="WorkOS init() StopWatch guide"><picture><source media="(prefers-color-scheme: dark)" srcset="/stopwatch/assets/workos-logo-white.svg"><img class="workos-logo" src="/stopwatch/assets/workos-logo.svg" alt="WorkOS" width="880" height="168"></picture><span class="brand-divider" aria-hidden="true"></span><img class="init-logo" src="/stopwatch/assets/init-logo.svg" alt="init()" width="512" height="115"></a>
+    <span class="header-label">HARDWARE / STOPWATCH</span>
+    <a class="header-link" href="/stopwatch/SKILL.md">For agents <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" aria-label="Guide navigation">
+      <div class="sidebar-top"><span class="mono small">CONTENTS / C152</span><p>StopWatch</p><span class="side-model">Development kit reference</span></div>
+      <nav aria-label="On this page">
+        <a href="#start" class="active" aria-current="location"><span>01</span>Setup</a>
+        <a href="#hardware"><span>02</span>Hardware</a>
+        <a href="#resources"><span>03</span>Resources</a>
+        <a href="#agents"><span>04</span>For agents</a>
+      </nav>
+      <div class="sidebar-bottom"><span class="document-label mono">M5STACK C152<br>ESP32-S3R8</span><a href="https://esptember.com/">ESPtember projects <span aria-hidden="true">↗</span></a></div>
+    </aside>
+
+    <main id="main">
+      <div class="document-header mono"><span>DEVICE MANUAL / C152</span><span>WORKOS INIT()</span></div>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <div class="eyebrow">M5STACK / ESP32-S3</div>
+          <h1 id="page-title">StopWatch</h1>
+          <p class="document-subtitle">Development kit reference</p>
+          <p>Setup, hardware specifications, and projects for the StopWatch kits distributed at WorkOS init().</p>
+          <div class="hero-actions"><a class="button primary" href="/stopwatch/install/">Install conference badge <span aria-hidden="true">→</span></a><a class="text-link" href="#start">Setup procedure <span aria-hidden="true">↓</span></a><a class="text-link" href="/stopwatch/SKILL.md">SKILL.md <span aria-hidden="true">↗</span></a></div>
+          <p>Install from Chrome on a computer with a USB-C data cable. <a class="text-link" href="https://github.com/chantastic/m5stack-stopwatch-authkit/issues/new">Report an issue <span aria-hidden="true">↗</span></a></p>
+        </div>
+        <figure class="device-visual">
+          <div class="figure-header mono"><span>FIG. 01</span><span>M5STACK STOPWATCH</span></div>
+          <div class="device-drawing"><img src="/stopwatch/assets/stopwatch-manual.png?v=2" alt="Head-on M5Stack StopWatch with a slim black bezel, a rectangular yellow button at 10, a rectangular blue button at 2, and a pale purple clock display" width="1254" height="1254"></div>
+          <figcaption><span>52 × 52 × 15.5 mm</span><span>Not to scale</span></figcaption>
+        </figure>
+      </section>
+
+      <div class="spec-strip" aria-label="At a glance"><div><span class="spec-value">ESP32-S3</span><span class="spec-label">Dual-core · 240 MHz</span></div><div><span class="spec-value">466 × 466</span><span class="spec-label">1.75″ AMOLED touch</span></div><div><span class="spec-value">16 MB + 8 MB</span><span class="spec-label">Flash + PSRAM</span></div><div><span class="spec-value">450 mAh</span><span class="spec-label">Built-in battery</span></div></div>
+
+      <section id="start" class="section">
+        <div class="section-heading"><div><span class="section-kicker mono">01 / SETUP</span><h2>Setup procedure</h2></div></div>
+        <div class="start-grid">
+          <article class="start-card"><span class="step mono">1.1</span><h3>Connect the device</h3><p>Connect a USB-C data cable. Check the device guide for buttons, power controls, and download mode.</p><a href="https://docs.m5stack.com/en/core/StopWatch">Open the device guide <span aria-hidden="true">↗</span></a></article>
+          <article class="start-card"><span class="step mono">1.2</span><h3>Set up Arduino</h3><p>Select the M5StopWatch board and install M5Unified and M5GFX. See the checklist below for required versions.</p><a href="https://docs.m5stack.com/en/arduino/stopwatch/program">Set up Arduino <span aria-hidden="true">↗</span></a></article>
+          <article class="start-card"><span class="step mono">1.3</span><h3>Run an example</h3><p>Compile and upload the display example, or follow a complete StopWatch project from the resource index.</p><a href="#resources">Browse examples <span aria-hidden="true">↓</span></a></article>
+        </div>
+        <div class="inline-note"><span class="note-symbol mono">NOTE</span><p><strong>Conference badge:</strong> use the <a href="/stopwatch/install/">browser installer</a> for the init() build, or follow the Arduino guide below to develop your own firmware. Installing firmware replaces the device’s application; keep any image you want to restore.</p></div>
+        <details class="detail"><summary><span>Arduino setup checklist</span><span class="detail-plus" aria-hidden="true">+</span></summary><div class="detail-body"><ol class="setup-steps"><li>Install the M5Stack package through <a href="https://docs.m5stack.com/en/arduino/arduino_board">Arduino Board Manager</a>. Use version <strong>3.3.7 or newer</strong> and select <strong>M5StopWatch</strong>.</li><li>Install <strong>M5Unified 0.2.15+</strong> and <strong>M5GFX 0.2.21+</strong> with their dependencies.</li><li>Connect a USB-C data cable. Hold the <strong>power/reset button for about 2 seconds</strong> until the green LED turns on, then release.</li><li>Select the device’s port. Compile and upload the <a href="https://docs.m5stack.com/en/arduino/stopwatch/display">official display example</a>.</li></ol><p><a href="https://docs.m5stack.com/en/guide/restore_factory/stopwatch">Restore M5Stack’s factory firmware with M5Burner</a>. This restores the manufacturer’s demo, not an init() custom image.</p></div></details>
+      </section>
+
+      <section id="hardware" class="section">
+        <div class="section-heading"><div><span class="section-kicker mono">02 / HARDWARE</span><h2>Hardware specifications</h2></div><a class="text-link" href="https://docs.m5stack.com/en/core/StopWatch">Full specifications <span aria-hidden="true">↗</span></a></div>
+        <div class="hardware-grid"><div class="hardware-summary"><h3>M5Stack StopWatch</h3><p>SKU C152. Check your board revision before using the expansion pins.</p><a href="https://shop.m5stack.com/products/m5stack-stopwatch-dev-kit-esp32-s3?variant=48862593515777">M5Stack product page <span aria-hidden="true">↗</span></a></div>
+        <dl class="hardware-list"><div><dt>Display & touch</dt><dd>Round AMOLED · CO5300 display driver · CST820B touch</dd></div><div><dt>Input & feedback</dt><dd>2 programmable buttons, power button, vibration motor</dd></div><div><dt>Motion & time</dt><dd>BMI270 6-axis IMU · RX8130CE real-time clock</dd></div><div><dt>Audio</dt><dd>MEMS microphone · ES8311 codec · AW8737A amplifier</dd></div><div><dt>Connectivity</dt><dd>2.4 GHz Wi-Fi · USB-C · HY2.0-4P expansion port</dd></div><div><dt>Power & size</dt><dd>M5PM1 power management · 52 × 52 × 15.5 mm · 39 g</dd></div></dl></div>
+        <details class="detail revision-note"><summary><span>Expansion pins — hardware revision notice</span><span class="detail-plus" aria-hidden="true">+</span></summary><div class="detail-body"><p>On some <strong>v1.0</strong> units, the rear pin printed “BAT” is actually <strong>5V IN</strong>. Do not connect a battery to that pin. On <strong>v1.0.1</strong>, the “*BAT” marking refers to the battery pin. Read M5Stack’s sticker correction and revision-specific pin map before wiring accessories.</p><a href="https://docs.m5stack.com/en/core/StopWatch">Check the official pin map <span aria-hidden="true">↗</span></a></div></details>
+      </section>
+
+      <section id="resources" class="section">
+        <div class="section-heading"><div><span class="section-kicker mono">03 / RESOURCES</span><h2>Resource index</h2></div></div>
+        <a class="featured-resource" href="https://esptember.com/day/day-12-c25k/" id="project-link"><div class="feature-icon mono" aria-hidden="true">C25K<span>EXAMPLE / 01</span></div><div class="feature-copy"><span class="resource-tag">PROJECT / ESPTEMBER</span><h3>Couch to 5K</h3><p>A StopWatch running timer with 27 workouts and two-button controls. Includes a build walkthrough.</p></div><span class="feature-arrow" aria-hidden="true">↗</span></a>
+        <div class="resource-list">
+          <a href="https://docs.m5stack.com/en/core/StopWatch"><span class="resource-kind mono">REFERENCE</span><div><h3>Hardware manual</h3><p>Pin maps, schematics, power behavior, and firmware downloads.</p></div><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/m5stack/M5Unified"><span class="resource-kind mono">ARDUINO</span><div><h3>M5Unified</h3><p>The shared device library. Start here for board initialization and peripherals.</p></div><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/m5stack/M5GFX"><span class="resource-kind mono">DISPLAY</span><div><h3>M5GFX</h3><p>Graphics primitives, text, and drawing for the round display.</p></div><span aria-hidden="true">↗</span></a>
+          <a href="https://docs.m5stack.com/en/uiflow2/stopwatch/program"><span class="resource-kind mono">MICROPYTHON</span><div><h3>UiFlow2 quick-start</h3><p>Set up the matching firmware for visual blocks and Python.</p></div><span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/m5stack/M5StopWatch-UserDemo"><span class="resource-kind mono">ESP-IDF</span><div><h3>Factory demo source</h3><p>Explore a complete application and its own toolchain requirements.</p></div><span aria-hidden="true">↗</span></a>
+          <a href="https://docs.m5stack.com/en/guide/restore_factory/stopwatch"><span class="resource-kind mono">RECOVERY</span><div><h3>Restore factory firmware</h3><p>M5Burner instructions for restoring M5Stack’s StopWatch firmware.</p></div><span aria-hidden="true">↗</span></a>
+          <a href="https://esptember.com/"><span class="resource-kind mono">INSPIRATION</span><div><h3>ESPtember projects</h3><p>Small-screen projects and practical build notes. Check the board named in each guide.</p></div><span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section id="agents" class="section agent-section">
+        <div class="section-heading"><div><span class="section-kicker mono">04 / FOR AGENTS</span><h2>Agent reference</h2></div><span class="agent-badge mono">SKILL.md</span></div>
+        <p class="agent-intro">Read or download the Markdown skill for board specifications, setup requirements, revision notes, and source links.</p>
+        <div class="prompt-box"><div class="prompt-label mono">EXAMPLE PROMPT</div><p id="agent-prompt">Read the StopWatch skill at <span id="skill-address">/stopwatch/SKILL.md</span>. I’m building for the M5Stack StopWatch C152 from WorkOS init(). Help me make a simple timer using its round screen and two buttons.</p><button id="copy-prompt" class="copy-button" type="button">Copy prompt <span aria-hidden="true">⧉</span></button></div>
+        <div class="agent-footer"><a class="button secondary" href="/stopwatch/SKILL.md">Read SKILL.md <span aria-hidden="true">↗</span></a><a class="text-link" href="/stopwatch/SKILL.md" download="SKILL.md">Download the skill <span aria-hidden="true">↓</span></a><span class="copy-status" id="copy-status" role="status" aria-live="polite"></span></div>
+        <p class="agent-fineprint">Review generated firmware against the current M5Stack documentation.</p>
+      </section>
+
+      <footer class="page-footer"><div class="footer-logos"><a href="https://workos.com/" aria-label="WorkOS"><picture><source media="(prefers-color-scheme: dark)" srcset="/stopwatch/assets/workos-logo-white.svg"><img class="workos-logo" src="/stopwatch/assets/workos-logo.svg" alt="WorkOS" width="880" height="168" loading="lazy"></picture></a><span class="brand-divider" aria-hidden="true"></span><a href="https://workos.com/init" aria-label="init()"><img class="init-logo" src="/stopwatch/assets/init-logo.svg" alt="init()" width="512" height="115" loading="lazy"></a></div><div class="footer-meta"><a href="https://esptember.com/">Projects: ESPtember <span aria-hidden="true">↗</span></a><span>Hardware sources: M5Stack · Reviewed 16 Sep 2026</span><a href="/llms.txt">Agent resource index</a></div></footer>
+    </main>
+  </div>
+</body>
+</html>
