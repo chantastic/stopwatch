@@ -26,8 +26,17 @@ public:
         frame_->setSize(ui::Width, ui::Height);
         frame_->center();
         frame_->removeFlag(LV_OBJ_FLAG_SCROLLABLE);
+        // LVGL delivers gestures to the first ancestor without this flag.
+        // This scene owns horizontal paging; do not bubble past its handler.
+        frame_->removeFlag(LV_OBJ_FLAG_GESTURE_BUBBLE);
         frame_->setBgColor(lv_color_black());
         frame_->setBgOpa(LV_OPA_COVER);
+        // A gesture belongs to one uninterrupted page contact. LVGL can cancel
+        // it with PRESS_LOST instead of sending this frame a RELEASED event.
+        // Discard on loss and begin every new contact cleanly.
+        auto cancel_gesture = [](lv_event_t*) { pending_gesture = 0; };
+        lv_obj_add_event_cb(frame_->get(), cancel_gesture, LV_EVENT_PRESSED, nullptr);
+        lv_obj_add_event_cb(frame_->get(), cancel_gesture, LV_EVENT_PRESS_LOST, nullptr);
         lv_obj_add_event_cb(frame_->get(), [](lv_event_t*) {
             if (context.setup || context.touch_test) return;
             auto* input = lv_indev_active();
@@ -97,7 +106,13 @@ void ui_init(lv_display_t* target, UiCallbacks callbacks) {
     mooncake::GetMooncake().update();
     lv_display_add_event_cb(display, [](lv_event_t*) { ui_rotation_changed(); }, LV_EVENT_RESOLUTION_CHANGED, nullptr);
 }
-void ui_update(const UiModel& model) { context.model = model; }
+void ui_update(const UiModel& model) {
+    context.model = model;
+    if (!context.setup && !context.touch_test && !ui::page_visible(context.page, model)) {
+        context.page = 3;
+        context.rebuild = true;
+    }
+}
 void ui_tick(uint32_t now_ms) {
     (void)now_ms;
     mooncake::GetMooncake().update();
@@ -105,7 +120,21 @@ void ui_tick(uint32_t now_ms) {
 void ui_rotation_changed() { if (app) app->reflow(); }
 void ui_page(int delta) {
     if (context.setup || context.touch_test || delta == 0) return;
-    context.page = (context.page + delta % ui::PageCount + ui::PageCount) % ui::PageCount;
+    // IDs stay stable for setup returns and diagnostics. Only traversal skips
+    // the invitation until the controller reveals it.
+    const int steps = delta % ui::visible_page_count(context.model);
+    const int direction = steps > 0 ? 1 : -1;
+    for (int i = 0; i < std::abs(steps); ++i) {
+        do {
+            context.page = (context.page + direction + ui::PageCount) % ui::PageCount;
+        } while (!ui::page_visible(context.page, context.model));
+    }
+    context.rebuild = true;
+    pending_gesture = 0;
+}
+void ui_open_after_dark() {
+    if (!context.model.after_dark_unlocked || context.setup || context.touch_test) return;
+    context.page = ui::AfterDarkPage;
     context.rebuild = true;
     pending_gesture = 0;
 }
@@ -166,5 +195,6 @@ UiTouchSample ui_touch_state() { return context.touch; }
 bool ui_touch_test_active() { return context.touch_test; }
 bool ui_setup_active() { return context.setup; }
 int ui_page_index() { return context.page; }
+int ui_page_count() { return ui::visible_page_count(context.model); }
 
 } // namespace badge

@@ -11,13 +11,14 @@ the conference application. No gateway changes are required.
 
 ## Pages and controls
 
-The six primary pages wrap in this fixed order:
+The primary pages wrap in this order, with After Dark hidden until unlocked:
 
 1. **init()**: lightweight looping wordmark/orbit preview, local clock, battery.
 2. **Schedule**: vertically scrollable published init() agenda, repeating daily
    in the badge's local time. The current block says **On now**; passed blocks
    are dimmed. Times, wrapped titles and available speaker details stay visible.
 3. **Developers After Dark**: honest invite placeholder with a reserved QR area.
+   Hidden initially; unlock with Morse `init` or the 1:30 PM reveal below.
    It deliberately has no scannable event destination yet.
 4. **Badge**: manual name/photo, init() brand, selected network icon/label and QR.
    Swipe vertically through GitHub, X/Twitter and LinkedIn, including empty slots.
@@ -27,7 +28,7 @@ The six primary pages wrap in this fixed order:
    scrolling is needed.
 
 The factory 468×466 framebuffer retains static side chevrons, top clock, bottom page
-name, and six dots. Useful content and QR quiet zones remain inside the round
+name, and five centered dots before unlock, six afterward. Useful content and QR quiet zones remain inside the round
 aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
 remains editable in setup. Standard firmware fonts have limited glyph coverage.
 
@@ -49,6 +50,40 @@ Gestures dispatch on release. A drag that returns to its start is still not a
 tap. Long holds do not activate taps. Setup is modal: drags cannot change the
 hidden page, network, or schedule position. Rotation uses the established IMU
 axis mapping/filter and stays stable throughout touch.
+
+## Secret After Dark reveal
+
+Use **either physical pusher for the entire word** to enter `init` in Morse:
+`.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Navigation keeps
+working while the badge listens on all primary pages. Use short taps around
+150 ms, holds around 600 ms, short pauses within letters, and roughly one second
+between letters. Wait for the pause after the final hold; the invitation opens
+automatically. After an incorrect attempt, leave both buttons alone for three
+seconds before retrying. Switching pushers mid-word or pressing both cancels.
+
+The recognizer accepts dots of 50–349 ms and dashes of 350–1400 ms. Symbol gaps
+are 50–599 ms; letter pauses are 600–2999 ms; a whole attempt must finish within
+15 seconds. Setup and Touch test discard progress, and their exit press cannot
+start a new code. These are monotonic timers, unaffected by phone/USB clock sync.
+USB `button` actions do not represent hold durations and cannot enter Morse.
+
+The automatic reveal currently follows the agenda's **daily local-time rule**:
+the first valid clock reading at or after **1:30 PM**, on any date, unlocks it.
+Booting or flashing after that time reveals it immediately. There is no October 7
+date restriction. An unset clock keeps it hidden, but Morse still works.
+The timed reveal adds the page and its dot without changing the current view,
+scroll position, or modal. Settings remains the last page. Stable internal IDs
+remain 0–5; navigation skips ID 2 until revealed.
+
+Either reveal latches in the separate versioned `conference_ui/after_dark_v1`
+NVS byte. It is saved promptly; failures keep the page open and retry after five
+seconds. A committed unlock survives restart, midnight, and clock corrections.
+Ordinary reflashing preserves it. A loss of power before a successful save can
+lose a Morse unlock. This is an Easter egg, not a security boundary.
+
+The policy lives in `after_dark_unlock.h`, recognition in `morse_unlock.h`, and
+the main task connects those helpers to existing debounced board input, clock,
+NVS and the UI model. Views never read the clock or storage directly.
 
 ## Settings and current schedule item
 
@@ -201,7 +236,9 @@ reasons, with separate last-POST evidence so captive probe GETs cannot overwrite
 it. It does not export request paths, headers, bodies, nonce or profile values.
 `status` includes the AP client count, without client identifiers, plus brightness,
 orientation mode, pending preference state/write count, page count, and current
-schedule index. A write count is per boot and is not a flash-wear measurement.
+schedule index. `page_count` is the visible count; `after_dark_unlocked` and
+`after_dark_save_pending` report reveal/persistence state without user data.
+A write count is per boot and is not a flash-wear measurement.
 
 Run `scripts/test.sh` and `scripts/build.sh`. Native checks cover real LVGL
 rotation, UI input/rendering, RTC validation, and cross-version profile storage.
@@ -216,6 +253,9 @@ Hardware verification results and limits belong in the dated report below;
 compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
+
+Secret invitation behavior and its host/device limits are recorded in the
+[After Dark verification report](after-dark-verification-2026-09-17.md).
 
 Current native ESP-IDF/LVGL results are in the
 [factory verification report](factory-verification-2026-09-17.md).

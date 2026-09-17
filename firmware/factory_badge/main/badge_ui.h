@@ -27,6 +27,7 @@ struct UiModel {
     int selected_network = 0;
     bool settings_pending = false;
     bool clock_valid = false;
+    bool after_dark_unlocked = false;
     int schedule_minute = -1; // Local minute of day; -1 when the clock is unset.
     int schedule_current = -1;
 };
@@ -56,6 +57,7 @@ void ui_tick(uint32_t now_ms);
 void ui_rotation_changed();
 void ui_page(int delta);
 void ui_button(bool both, int delta);
+void ui_open_after_dark(); // Successful code entry; never interrupts a modal.
 void ui_show_setup(const std::string& ssid, const std::string& password,
                    const std::string& ip = "192.168.4.1", const std::string& status = "");
 void ui_close_setup(bool saved);
@@ -67,5 +69,6 @@ UiTouchSample ui_touch_state();
 bool ui_touch_test_active();
 bool ui_setup_active();
 int ui_page_index();
+int ui_page_count(); // Visible pages; stable page IDs do not change on unlock.
 
 } // namespace badge

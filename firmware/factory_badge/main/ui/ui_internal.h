@@ -8,6 +8,13 @@ namespace badge::ui {
 constexpr int Width = 468;
 constexpr int Height = 466;
 constexpr int PageCount = 6;
+constexpr int AfterDarkPage = 2;
+inline bool page_visible(int page, const UiModel& model) {
+    return page != AfterDarkPage || model.after_dark_unlocked;
+}
+inline int visible_page_count(const UiModel& model) {
+    return model.after_dark_unlocked ? PageCount : PageCount - 1;
+}
 inline constexpr const char* PageNames[] = {"init()", "Schedule", "After Dark", "Badge", "Hack your Badge", "Settings"};
 inline constexpr const char* NetworkNames[] = {"GitHub", "X / Twitter", "LinkedIn"};
 inline constexpr const char* HackUrl = "https://drop.workos.cloud/stopwatch";

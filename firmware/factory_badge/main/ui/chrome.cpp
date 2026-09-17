@@ -29,9 +29,19 @@ void Chrome::update() {
     set_hidden(root_, context_.setup || context_.touch_test);
     set_text(clock_, context_.model.clock_text);
     set_text(footer_, context_.page == 5 && context_.model.settings_pending ? "Saving settings..." : PageNames[context_.page]);
-    if (page_ != context_.page) {
+    const int count = visible_page_count(context_.model);
+    if (page_ != context_.page || visible_count_ != count) {
         page_ = context_.page;
-        for (int i = 0; i < PageCount; ++i) lv_obj_set_style_bg_color(dots_[i], i == page_ ? white() : lv_color_hex(0x55555e), 0);
+        visible_count_ = count;
+        int slot = 0;
+        const int start = (Width - ((count - 1) * 16 + 7)) / 2;
+        for (int i = 0; i < PageCount; ++i) {
+            const bool visible = page_visible(i, context_.model);
+            set_hidden(dots_[i], !visible);
+            if (!visible) continue;
+            lv_obj_set_pos(dots_[i], start + slot++ * 16, 445);
+            lv_obj_set_style_bg_color(dots_[i], i == page_ ? white() : lv_color_hex(0x55555e), 0);
+        }
     }
 }
 } // namespace badge::ui

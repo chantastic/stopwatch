@@ -13,6 +13,12 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17: make Developers After Dark a hidden Easter egg, revealed by
+  entering Morse `init` on either pusher or by 1:30 PM local time. The implemented
+  time rule repeats daily like the agenda; either reveal persists across restart
+  and clock corrections. Hide its dot until revealed, retain normal pusher
+  navigation, and keep setup/Touch test isolated from code entry.
+
 - September 17: use the published init() agenda from workos.com/init. Repeat it
   daily in the badge's local time, highlight **On now**, and dim passed blocks.
   Next start times delimit blocks; Happy hour stays current until midnight
