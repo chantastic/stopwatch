@@ -50,6 +50,25 @@ class Device(usb.Device):
         image.save(path)
         return image
 
+def capture_pages(device, out):
+    captured, skipped = [], []
+    for index in range(6):
+        # Read the current reveal state: a timed reveal can happen during this
+        # run. Older factory-3 firmware has no flag and always shows page 2.
+        if index == 2 and device.status().get("after_dark_unlocked") is False:
+            skipped.append({"page": index, "reason": "After Dark is locked"})
+            continue
+        device.page(index); time.sleep(.2)
+        picture = device.capture(out / f"page-{index}.png")
+        captured.append(index)
+        if index == 4:
+            mask = Image.new("L", picture.size)
+            ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
+            circular = Image.new("RGB", picture.size)
+            circular.paste(picture, mask=mask)
+            assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://drop.workos.cloud/stopwatch"]
+    return captured, skipped
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", required=True)
@@ -93,17 +112,7 @@ def main():
 
     try:
         assert original["clock_valid"] and original["store_ready"] and original["wifi_mode"] == 0
-        images = []
-        for index in range(6):
-            device.page(index); time.sleep(.2)
-            picture = device.capture(out / f"page-{index}.png")
-            images.append(picture)
-            if index == 4:
-                mask = Image.new("L", picture.size)
-                ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
-                circular = Image.new("RGB", picture.size)
-                circular.paste(picture, mask=mask)
-                assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://drop.workos.cloud/stopwatch"]
+        report["captured_pages"], report["skipped_pages"] = capture_pages(device, out)
         report["pages_and_hack_qr"] = True
         device.page(0); before = device.capture(out / "animation-a.png")
         time.sleep(.4); after = device.capture(out / "animation-b.png")

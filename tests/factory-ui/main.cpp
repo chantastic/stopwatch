@@ -91,6 +91,14 @@ void assert_inside(lv_obj_t* child, lv_obj_t* parent) {
     assert(child_area.x1 >= parent_area.x1 && child_area.x2 <= parent_area.x2);
     assert(child_area.y1 >= parent_area.y1 && child_area.y2 <= parent_area.y2);
 }
+int visible_dots(lv_obj_t* object) {
+    if (lv_obj_has_flag(object, LV_OBJ_FLAG_HIDDEN)) return 0;
+    if (lv_obj_get_width(object) == 7 && lv_obj_get_height(object) == 7) return 1;
+    int count = 0;
+    for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i)
+        count += visible_dots(lv_obj_get_child(object, i));
+    return count;
+}
 
 }
 
@@ -136,6 +144,88 @@ int main(int argc, char** argv) {
     model.battery_percent = 74;
     badge::ui_update(model);
     spin();
+
+    // A locked invitation is absent from every navigation route and the dots.
+    assert(badge::ui_page_count() == 5);
+    assert(visible_dots(lv_display_get_layer_top(display)) == 5);
+    badge::ui_open_after_dark();
+    assert(badge::ui_page_index() == 0);
+    for (int id : {1, 3, 4, 5, 0}) {
+        tap(434, 233);
+        assert(badge::ui_page_index() == id);
+    }
+    for (int id : {5, 4, 3, 1, 0}) {
+        badge::ui_button(false, -1); spin();
+        assert(badge::ui_page_index() == id);
+    }
+    badge::ui_page(1); spin();
+    swipe(320, 390, 150, 390);
+    assert(badge::ui_page_index() == 3);
+    badge::ui_page(-1); spin();
+    assert(badge::ui_page_index() == 1);
+
+    // A normal press-locked page contact may end over the separate chrome
+    // layer: it pages once on release and cannot affect the next plain tap.
+    badge::ui_page(-1); spin();
+    touch(100, 390, true);
+    touch(250, 390, true);
+    touch(434, 200, true);
+    touch(434, 270, true);
+    touch(434, 270, false);
+    assert(badge::ui_page_index() == 5);
+    tap(234, 80);
+    assert(badge::ui_page_index() == 5);
+    tap(434, 233); // A fresh arrow contact still completes normally.
+    assert(badge::ui_page_index() == 0);
+
+    // Framework cancellation sends PRESS_LOST instead of RELEASED. An already
+    // recognized gesture must be discarded even if release lands on chrome.
+    touch(100, 390, true);
+    touch(250, 390, true);
+    lv_indev_wait_release(input);
+    touch(434, 233, true);
+    touch(434, 233, false);
+    assert(badge::ui_page_index() == 0);
+    tap(234, 80);
+    assert(badge::ui_page_index() == 0);
+    tap(434, 233);
+    assert(badge::ui_page_index() == 1);
+
+    // A clock reveal adds the dot/page without rebuilding the reader's agenda.
+    auto* locked_title = find_label(lv_display_get_screen_active(display), badge_schedule::Items[0].title);
+    auto* locked_schedule = lv_obj_get_parent(lv_obj_get_parent(locked_title));
+    swipe(234, 335, 234, 170);
+    const int locked_scroll = lv_obj_get_scroll_y(locked_schedule);
+    assert(locked_scroll > 0);
+    model.after_dark_unlocked = true;
+    badge::ui_update(model); spin();
+    assert(badge::ui_page_index() == 1 && badge::ui_page_count() == 6);
+    assert(visible_dots(lv_display_get_layer_top(display)) == 6);
+    assert(locked_title == find_label(lv_display_get_screen_active(display), badge_schedule::Items[0].title));
+    assert(lv_obj_get_scroll_y(locked_schedule) == locked_scroll);
+    badge::ui_open_after_dark(); spin();
+    assert(badge::ui_page_index() == 2);
+    assert(find_label(lv_display_get_screen_active(display), "After Dark"));
+    snapshot("after-dark-unlocked");
+    badge::ui_page(-2); spin();
+
+    // A reveal during setup or Touch test cannot replace the modal. Stable IDs
+    // preserve Settings returns even when the visible page count changes.
+    model.after_dark_unlocked = false;
+    badge::ui_update(model);
+    badge::ui_page(-1); spin();
+    badge::ui_show_setup("init-test-badge", "example1234"); spin();
+    model.after_dark_unlocked = true;
+    badge::ui_update(model);
+    badge::ui_open_after_dark(); spin();
+    assert(badge::ui_setup_active() && badge::ui_page_index() == 5);
+    badge::ui_close_setup(true); spin();
+    assert(badge::ui_page_index() == 5);
+    badge::ui_show_touch_test();
+    badge::ui_open_after_dark(); spin();
+    assert(badge::ui_touch_test_active());
+    badge::ui_close_touch_test();
+    badge::ui_page(1); spin();
 
     for (int page = 0; page < 6; ++page) {
         assert(badge::ui_page_index() == page);

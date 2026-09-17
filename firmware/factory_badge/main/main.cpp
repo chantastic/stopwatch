@@ -6,6 +6,8 @@
 #include "schedule.h"
 #include "orientation_filter.h"
 #include "button_gesture.h"
+#include "morse_unlock.h"
+#include "after_dark_unlock.h"
 #include <ArduinoJson.h>
 #include <nvs_flash.h>
 #include <nvs.h>
@@ -25,6 +27,8 @@ constexpr char Build[] = "conference-factory-3";
 ConferenceSettings settings;
 OrientationFilter orientation;
 BadgeButtonGesture buttons;
+MorseUnlock morse;
+badge_after_dark::Unlock afterDark;
 badge::UiModel model;
 badge::ProfileSnapshot profile;
 nvs_handle_t preferences;
@@ -85,6 +89,8 @@ void refreshModel() {
     model.schedule_minute = badge_schedule::localMinute(
         badge_clock::epoch(), badge_clock::offset(), model.clock_valid);
     model.schedule_current = badge_schedule::current(model.schedule_minute);
+    afterDark.updateClock(badge_clock::epoch(), badge_clock::offset(), model.clock_valid, board::millis());
+    model.after_dark_unlocked = afterDark.unlocked();
     badge::ui_update(model);
 }
 void status(const char* nonce) {
@@ -98,7 +104,9 @@ void status(const char* nonce) {
     for (int i = 0; i < 3; ++i) if (!saved.profile.urls[i].empty()) mask |= 1 << i;
     JsonDocument data;
     data["build"] = Build; data["framework"] = "ESP-IDF/LVGL/Smooth/Mooncake";
-    data["page_count"] = 6; data["page"] = badge::ui_page_index();
+    data["page_count"] = badge::ui_page_count(); data["page"] = badge::ui_page_index();
+    data["after_dark_unlocked"] = afterDark.unlocked();
+    data["after_dark_save_pending"] = afterDark.pending();
     data["brightness_percent"] = settings.brightness;
     data["orientation_mode"] = settings.orientationName();
     data["rotation"] = board::rotation(); data["preferences_pending"] = settings.pending();
@@ -236,6 +244,11 @@ void pollCommands() {
     }
 }
 void persist(uint32_t now) {
+    if (afterDark.saveDue(now)) {
+        if (preferencesReady && nvs_set_u8(preferences, "after_dark_v1", afterDark.encoded()) == ESP_OK && nvs_commit(preferences) == ESP_OK) {
+            ++preferenceWrites; afterDark.saved();
+        } else afterDark.saveFailed(now);
+    }
     if (settings.saveDue(now)) {
         if (preferencesReady && nvs_set_u32(preferences, "prefs", settings.encoded()) == ESP_OK && nvs_commit(preferences) == ESP_OK) {
             ++preferenceWrites; settings.saved();
@@ -273,8 +286,12 @@ extern "C" void app_main() {
     esp_err_t nvs = nvs_flash_init();
     if (nvs != ESP_OK || !board::init()) { line("CONFERENCE_BOOT_FAILED"); return; }
     preferencesReady = nvs_open("conference_ui", NVS_READWRITE, &preferences) == ESP_OK;
-    uint32_t value = 0; uint8_t network = 0;
-    if (preferencesReady) { nvs_get_u32(preferences, "prefs", &value); nvs_get_u8(preferences, "network", &network); }
+    uint32_t value = 0; uint8_t network = 0, savedUnlock = 0;
+    if (preferencesReady) {
+        nvs_get_u32(preferences, "prefs", &value); nvs_get_u8(preferences, "network", &network);
+        nvs_get_u8(preferences, "after_dark_v1", &savedUnlock);
+    }
+    afterDark.restore(savedUnlock);
     settings.restore(value); model.selected_network = network < 3 ? network : 0;
     // A finger held during boot can defer rotation. Keep the filter aligned
     // with the actual display and retry the saved fixed mode after release.
@@ -307,7 +324,16 @@ extern "C" void app_main() {
         if (lastLoop) maxLoopGap = std::max(maxLoopGap, now - lastLoop);
         lastLoop = now; ++loopCount;
         board::poll(); badge_clock::poll(); pollCommands();
-        auto keys = board::buttons(); applyButton(buttons.update(keys.yellow, keys.blue, now));
+        auto keys = board::buttons();
+        // A pusher used to leave a modal cannot also start the secret code.
+        const bool morseEnabled = !afterDark.unlocked() && !setupRequested &&
+            !badge::ui_setup_active() && !badge::ui_touch_test_active();
+        const bool decoded = morse.update(keys.yellow, keys.blue, now, morseEnabled);
+        applyButton(buttons.update(keys.yellow, keys.blue, now));
+        if (decoded && afterDark.unlock(now)) {
+            refreshModel();
+            badge::ui_open_after_dark();
+        }
         auto contact = board::touch();
         if (badge::ui_touch_test_active() && contact.valid && contact.sequence &&
             (contact.pressed || badge::ui_touch_state().sample))

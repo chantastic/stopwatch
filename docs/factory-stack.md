@@ -16,6 +16,7 @@ under `firmware/devices_badge/` for rollback reference and regression fixtures.
 | Profile/setup | `main/services.*`, `portal_page.h` | Compatible atomic records, photo decoding, temporary AP, HTTP/DNS workers |
 | Clock | `main/clock_service.*` | UTC, persisted display offset, computer/phone provisioning and RTC readback |
 | Agenda | `main/schedule.h` | Published blocks and daily local-time current/passed/upcoming rules |
+| Secret invitation | `main/after_dark_unlock.h`, `morse_unlock.h` | Pure reveal policy and bounded physical-pusher Morse recognition; main owns persistence |
 
 Views receive a `UiModel` and invoke callbacks. They must not read hardware,
 open NVS, start Wi-Fi, or write profile records. Update labels and styles in

@@ -5,7 +5,9 @@ This compiles the production page files with real LVGL, Smooth container ownersh
 and Mooncake lifecycle, using a memory framebuffer and a simulated pointer input.
 Address/undefined-behavior sanitizers are enabled by default.
 
-Checks cover all six pages; fixed chrome after partial redraws; no redraws on idle
+Checks cover hidden invitation traversal and five/six centered dots, noninterrupting
+reveal during agenda scrolling/modals, Morse-success page entry, all six pages;
+fixed chrome after partial redraws; no redraws on idle
 static pages; release-only buttons; drag-out-and-back, within-button drag and
 long-hold cancellation; real agenda text and wrapped titles/details; current/past/upcoming
 styles, invalid time, daily reset, entry focus and preserved schedule scroll; native

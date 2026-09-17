@@ -13,7 +13,7 @@ if [[ "$(uname -s)" != Darwin ]]; then
 fi
 mkdir -p "$REPO_ROOT/.build/tests"
 FLAGS=(-std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer)
-for name in account_paging badge_styles button_gesture orientation_filter profile_urls voice_reply_state conference_navigation conference_settings daily_schedule; do
+for name in account_paging badge_styles button_gesture orientation_filter profile_urls voice_reply_state conference_navigation conference_settings daily_schedule morse_unlock after_dark_unlock; do
   "$CXX" "${FLAGS[@]}" "$REPO_ROOT/tests/check_$name.cpp" -o "$REPO_ROOT/.build/tests/$name"
   "$REPO_ROOT/.build/tests/$name"
 done
@@ -43,6 +43,7 @@ bash "$REPO_ROOT/tests/conference-profile-host/run.sh"
 python3 "$REPO_ROOT/tests/test_provision_clock.py"
 python3 "$REPO_ROOT/tests/check_flash_layout.py"
 python3 "$REPO_ROOT/tests/test_flash_clock.py"
+python3 "$REPO_ROOT/tests/test_verify_factory.py"
 
 # Current native factory-stack application. These compile the production code
 # against real LVGL or bounded host hardware/filesystem adapters.
