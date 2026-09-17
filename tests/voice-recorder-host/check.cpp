@@ -91,6 +91,14 @@ bool FakeMic::record(int16_t *data,size_t count,uint32_t rate,bool stereo) {
   ++recordings;
   if(neverStarts.load())return true;
   ownsBuffer.store(true);
+  if(completeImmediately) {
+    // Sample-budget tests exercise counting and WAV bounds, not DMA timing.
+    // Avoid making their progress depend on hundreds of OS thread wakeups.
+    assert(!gateWrite.load() && !gateTail.load());
+    for(size_t i=0;i<count;i++)data[i]=(i%2)?-1000:2000;
+    ownsBuffer.store(false);
+    return true;
+  }
   writer=std::thread([=] {
     // Deliberately leave isRecording()==0 after enqueue, as the pinned Mic can.
     while(gateWrite.load())vTaskDelay(1);
@@ -112,17 +120,26 @@ void FakeMic::reset() {
   assert(!ownsBuffer.load());
   if(writer.joinable())writer.join();
   failBegin=false;failRecord=false;neverStarts=false;
+  completeImmediately=false;
   gateBegin=false;beginEntered=false;gateWrite=false;gateTail=false;
   running=false;endEntered=false;recordings=0;begins=0;ends=0;
 }
 
-template<class Predicate> static void until(Predicate predicate,unsigned timeout=4000) {
+template<class Predicate> static void untilAt(int line,Predicate predicate,unsigned timeout=4000) {
   const auto deadline=std::chrono::steady_clock::now()+std::chrono::milliseconds(timeout);
   while(!predicate()) {
-    assert(std::chrono::steady_clock::now()<deadline);
+    if(std::chrono::steady_clock::now()>=deadline) {
+      std::cerr<<"Recorder wait timed out at check.cpp:"<<line
+               <<" after "<<timeout<<" ms; chunks="<<M5.Mic.recordings.load()
+               <<", ownsBuffer="<<M5.Mic.ownsBuffer.load()
+               <<", running="<<M5.Mic.running.load()<<std::endl;
+      std::abort();
+    }
     vTaskDelay(1);
   }
 }
+// Report the waiting assertion's call site, not this shared helper's line.
+#define until(...) untilAt(__LINE__,__VA_ARGS__)
 template<class Action> static void nonblocking(Action action) {
   auto start=std::chrono::steady_clock::now();action();
   assert(std::chrono::steady_clock::now()-start<std::chrono::milliseconds(20));
@@ -203,8 +220,11 @@ int main() {
   assert(rec.error()==VoiceRecorder::MIC_TIMED_OUT && !rec.take(wav,bytes,duration) && !allocation.load());
 
   // A complete 30-second sample budget cannot overrun the single allocation.
-  // The fake hardware runs faster than real time; this is not a timing test.
-  M5.Mic.reset();assert(rec.start());until([&] {return !rec.busy();},10000);
+  // Complete chunks synchronously: the gated tests above cover asynchronous
+  // ownership, while this check must not depend on 600 OS thread/sleep cycles.
+  M5.Mic.reset();M5.Mic.completeImmediately=true;
+  assert(rec.start());until([&] {return !rec.busy();},10000);
+  assert(!M5.Mic.writer.joinable());
   assert(M5.Mic.recordings==600);assert(!rec.start());checkWav(rec,480000);
 
   // A completed-but-untaken result is wiped by the worker, not by cancel().

@@ -106,6 +106,18 @@ protection uses them. Workflow actions are pinned to reviewed official commit
 SHAs. Updating a dependency should include its lockfile or recorded revision and
 the relevant checks.
 
+Both npm jobs use WorkOS's pinned
+[Socket Firewall setup action](https://github.com/workos/setup-socket-firewall)
+and the existing private-repository `SOCKET_FIREWALL_TOKEN` organization secret.
+The token is passed only to that action; it is not a publishing credential. Setup
+fails before dependency installation if the organization secret is unavailable.
+Resolve secret delivery through the established WorkOS process instead of
+switching CI to an unprotected registry. GitHub's separate Socket project report
+does not replace this dependency-download control.
+Both web projects omit registry-specific `resolved` URLs from their npm lockfiles
+using `.npmrc`; versions and integrity hashes remain pinned. Keep that portable
+metadata convention without overriding the machine's protected registry.
+
 ## Qualify and promote a release
 
 A successful CI run establishes compilation and automated test results. It does
