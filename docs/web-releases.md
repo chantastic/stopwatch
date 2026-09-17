@@ -29,13 +29,19 @@ drop-in replacement for these public downloads. Until a team-owned public artifa
 channel is configured and verified, the current release maintainer publishes new
 approved files there; contributors can submit and review all source changes here.
 
-## Current supported installation
+## Browser installation paths
 
-This release updates **already prepared conference badges** using desktop Chrome
-or Edge and Web Serial. It does not convert stock devices or format storage.
-Factory layouts, unavailable storage, unusual OTA selectors, protected chips
-and wrong hardware fail closed. A future factory conversion must be separately
-qualified; do not turn a failed update preflight into an automatic erase.
+**Update badge** updates already prepared conference badges using desktop Chrome
+or Edge and Web Serial. Updates never format storage. Factory layouts, unavailable
+storage, unusual OTA selectors, protected chips, and wrong hardware fail closed.
+
+The separate **First install** path requires a verified local recovery copy and
+explicit replacement confirmation for the recognized factory layout. **Finish
+first install** can prepare unavailable storage after an interrupted conversion.
+See [browser first install](browser-factory-install.md) for the exact safeguards
+and pending hardware qualification. These paths reuse the same published release;
+website publication still requires review. A failed update never erases storage
+automatically.
 
 The browser downloads and verifies hashes, then checks ESP32-S3 security state,
 16 MiB flash, the complete existing partition sector and a recognized app0 boot

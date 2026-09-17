@@ -139,6 +139,16 @@ describe('Public StopWatch routes', () => {
     expect(await head.text()).toBe('');
   });
 
+  it('keeps recovery files local and exposes distinct factory, update, and recovery actions', async () => {
+    const html = await (await get('/stopwatch/install/')).text();
+    for (const id of ['prepare', 'install', 'save-backup', 'replace-confirm', 'factory-write', 'finish-confirm', 'finish-install']) {
+      expect(html).toContain(`id="${id}"`);
+    }
+    expect(html).toContain('Your recovery copy stays on your computer');
+    expect((await get('/stopwatch/install/recovery.bin')).status).toBe(404);
+    expect((await get('/stopwatch/install/recovery.bin', 'POST')).status).toBe(405);
+  });
+
   it.each(releaseConfig.assets)('serves the verified $name without runtime network access', async asset => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Runtime egress forbidden'));
     try {
