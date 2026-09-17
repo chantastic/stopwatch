@@ -203,9 +203,34 @@ library modification. Existing M5Unified click/drag eligibility still uses its
 original coordinates and thresholds; application release semantics are retained.
 
 This is a provisional trial for the observed development board. Upper/bottom
-aiming was user-confirmed; the side/center region labels were inferred. Fresh
-touches and comparison in both fixed orientations are still needed, and these
-coefficients are not a validated default for the roughly 400-unit batch.
+aiming was user-confirmed; the side/center region labels were inferred. The
+Default-orientation follow-up below supports the correction; physical comparison
+in 180° is still needed. These coefficients are not a validated default for the
+roughly 400-unit batch.
+
+### Physical follow-up with the scale correction
+
+On firmware `213a527`, the user reported improvement and completed a further
+60-second observation in Default/rotation 0. Excluding initial stale samples and
+unpaired releases yielded 54 new physical taps versus 37 baseline taps. Targets
+were assigned by nearest crosshair; fingertip locations were not independently
+measured. Median target errors (right/down positive) changed as follows:
+
+| Target | Horizontal error before → after | Vertical error before → after |
+| --- | --- | --- |
+| Top | -1 → -5 px | -2 → +3 px |
+| Center | +15 → -4 px | +23 → +5 px |
+| Bottom | +4 → +5 px | +39 → 0 px |
+| Left | -20 → +1 px | +30 → -5 px |
+| Right | +30 → +4 px | +23 → -9 px |
+
+Median distance from the inferred target fell from 31.1 to 10.0 pixels. Bottom
+vertical readings spanned -6 to +7 pixels, previously +28 to +48. Keep the
+current correction: residual scatter and the right target's 9-pixel upward bias
+do not yet warrant another adjustment without a controlled labeled-target test.
+No firmware/settings changed during observation; the serial observer closed.
+Private evidence: `.build/touch-test-verification/live-20260917-092455.jsonl`
+and `tap-comparison-20260917-092455.json` in that directory.
 
 ## Build target, USB, and flash layout
 

@@ -1,5 +1,17 @@
 # Conference Settings verification — September 17, 2026
 
+## Physical acceptance follow-up
+
+The user tested the installed scale correction (`213a527`) in Default orientation.
+A subsequent one-minute live observation captured 54 completed sensor taps;
+median distance to the inferred target improved from 31.1 to 10.0 pixels, and
+bottom vertical median error improved from +39 to 0 pixels. This supersedes the
+earlier lack of fresh physical observations below. See
+[hardware notes](hardware.md#physical-follow-up-with-the-scale-correction) for
+per-target results, evidence locations, and the remaining 180°/fleet limitations.
+The observation changed no firmware or settings and ended with the serial port
+closed. The user reported that the correction felt good; retain it for now.
+
 ## Follow-up: measured continuous touch scaling
 
 The user requested a continuous scale correction based on the earlier physical
