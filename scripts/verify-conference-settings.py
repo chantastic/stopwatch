@@ -91,7 +91,7 @@ def main():
 
         # Out-and-back gestures must never become taps on any setting.
         before = state()
-        for x, y in ((342, 167), (234, 272), (332, 362)):
+        for x, y in ((342, 167), (154, 272), (314, 272), (332, 362)):
             device.touch("begin", x, y)
             device.touch("move", x, y - 65)
             device.touch("move", x, y)
@@ -144,7 +144,7 @@ def main():
         result = settled()
         assert result["orientation_mode"] == "Free"
         device.capture(out / "settings-free.png")
-        assert device.tap(234, 272)["setup"]
+        assert device.tap(154, 272)["setup"]
         result = device.tap(234, 423)
         assert result["page"] == 5 and not result["setup"] and result["wifi_mode"] == 0
         device.page(3)

@@ -27,6 +27,13 @@ edits. A successful clock sync is retained even if those edits are cancelled.
 The actual phone flow still needs the acceptance check described in the
 [Settings verification report](docs/conference-verification-2026-09-17.md).
 
+**Settings → Touch test** shows five white targets and a live purple touch
+marker, retained after release. Either pusher returns to Settings. The test
+temporarily holds the current rotation; it changes no saved mode or calibration,
+saves no touch data, and starts no network. Choose Default or 180° and reopen it
+to compare alignment. Physical alignment still requires observation on the
+device; simulated diagnostic input cannot establish it.
+
 ## Build and flash
 
 Install Arduino CLI, ESP32 core **3.3.10**, M5Unified **0.2.19**, M5GFX **0.2.26**,

@@ -2,14 +2,17 @@
 #include <stdint.h>
 
 enum class ConferenceOrientationMode : uint8_t { Free, Default, Opposite };
-enum class ConferenceSettingsAction : uint8_t { None, Dimmer, Brighter, Connect, Free, Default, Opposite };
+enum class ConferenceSettingsAction : uint8_t { None, Dimmer, Brighter, Connect, TouchTest, Free, Default, Opposite };
 
 inline ConferenceSettingsAction conferenceSettingsHit(int x, int y) {
   if (y >= 146 && y <= 188) {
     if (x >= 94 && x <= 158) return ConferenceSettingsAction::Dimmer;
     if (x >= 310 && x <= 374) return ConferenceSettingsAction::Brighter;
   }
-  if (x >= 108 && x <= 360 && y >= 250 && y <= 294) return ConferenceSettingsAction::Connect;
+  if (y >= 250 && y <= 294) {
+    if (x >= 78 && x < 230) return ConferenceSettingsAction::Connect;
+    if (x >= 238 && x < 390) return ConferenceSettingsAction::TouchTest;
+  }
   if (y >= 342 && y <= 382) {
     if (x >= 91 && x <= 181) return ConferenceSettingsAction::Free;
     if (x >= 189 && x <= 279) return ConferenceSettingsAction::Default;

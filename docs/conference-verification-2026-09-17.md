@@ -1,5 +1,31 @@
 # Conference Settings verification — September 17, 2026
 
+## Follow-up: Settings touch test
+
+Settings now includes **Touch test** next to Connect phone. The modal shows five
+targets, a live marker from cached raw sensor input transformed once by M5GFX,
+and the last sample after release. It holds the entry rotation without changing
+the saved mode. Either pusher or the chord returns to Settings; any remaining
+physical contact is ignored until full release. It applies no calibration.
+
+The complete host suite, firmware build and independent code review pass.
+Ordinary guarded upload verified the existing partition map and application
+writes, then reported fresh RTC `UNIT_READY`, with no storage initialization.
+Actual-firmware USB dispatch checks passed for opening-tap exclusion, tiny
+sample movement, long drag isolation, retained release position, and blue,
+yellow and chord exits in Default/180°/Free respectively. Test activity did not
+write preferences, change profiles or open networking. The relocated Connect
+phone control still opens setup and returns to Settings with radios off.
+Framebuffer captures were visually checked within the circular display.
+
+These are simulated input checks on the board. Real sensor alignment, physical
+button timing and moved-board behavior remain for hands-on observation. The
+badge was left on Settings, with its starting Free mode and 50% brightness.
+Application SHA-256:
+`f5c56219da104d5db002deb826453a44a014ed0bf083cae8dd085d26282f3eb3`.
+Private captures/results are under `.build/touch-test-verification/`; host,
+build and upload logs are `.build/touch-test-{host,build,flash}.log`.
+
 ## Follow-up: fixed orientation labels corrected
 
 After device feedback on the initial `2dcd246` release, the fixed choices now

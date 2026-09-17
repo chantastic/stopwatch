@@ -9,6 +9,7 @@
 #include "button_gesture.h"
 #include "conference_navigation.h"
 #include "conference_settings.h"
+#include "conference_touch_test.h"
 #include "conference_profile_store.h"
 #include "conference_portal.h"
 #include "conference_clock.h"
@@ -23,8 +24,10 @@ static constexpr const char *PAGE_NAMES[] = {"init()", "Schedule", "After Dark",
 static constexpr const char *NETWORK_NAMES[] = {"GitHub", "X / Twitter", "LinkedIn"};
 ConferenceNavigation navigation;
 ConferenceSettings badgeSettings;
+ConferenceTouchTest touchTest;
 ConferencePage conferenceSetupReturn = ConferencePage::Badge;
 bool conferenceOrientationPending = false, conferencePreferencesReady = false;
+bool conferenceSuppressTouchUntilRelease = false;
 uint32_t conferencePreferenceWrites = 0, conferenceLastPowerRead = 0;
 int conferenceCurrentItem = -1;
 ConferenceProfileStore manualProfile;
@@ -197,9 +200,10 @@ static void conferenceSettingsView() {
   conferenceText(String(badgeSettings.brightness) + "%", 234, 168, &fonts::FreeSansBold12pt7b, TFT_WHITE, 120);
   conferenceText(conferenceClockValid() ? conferenceClockDateTimeText() : String("Date / time not set"), 234, 214, &fonts::FreeSans9pt7b, TFT_WHITE, 320);
   conferenceText("Sync time in phone setup", 234, 236, &fonts::Font0, DIM);
-  d.fillRoundRect(108, 250, 252, 44, 10, PANEL);
-  conferenceText("Connect phone", 234, 272, &fonts::FreeSansBold12pt7b, TFT_WHITE, 240, PANEL);
-  conferenceText("Edit badge or sync time", 234, 308, &fonts::Font0, DIM);
+  d.fillRoundRect(78, 250, 152, 44, 10, PANEL);
+  d.fillRoundRect(238, 250, 152, 44, 10, PANEL);
+  conferenceText("Connect phone", 154, 272, &fonts::FreeSans9pt7b, TFT_WHITE, 144, PANEL);
+  conferenceText("Touch test", 314, 272, &fonts::FreeSans9pt7b, TFT_WHITE, 144, PANEL);
   conferenceText("Orientation", 234, 328, &fonts::FreeSans9pt7b, DIM);
   for (int i = 0; i < 3; ++i) {
     int left = 91 + i*98;
@@ -214,6 +218,31 @@ static void conferenceSettingsView() {
       d.drawCircle(left + 60, 355, 2, TFT_WHITE);
     }
   }
+}
+static void conferenceTouchTestView() {
+  auto &d = M5.Display;
+  conferenceText("Touch test", 234, 54, &fonts::FreeSansBold12pt7b);
+  conferenceText("Touch or drag across the targets", 234, 82, &fonts::Font0, DIM);
+  const int points[][2] = {{234, 120}, {234, 234}, {234, 362}, {112, 234}, {356, 234}};
+  for (const auto &point : points) {
+    d.drawCircle(point[0], point[1], 14, TFT_WHITE);
+    d.drawFastHLine(point[0] - 22, point[1], 45, TFT_WHITE);
+    d.drawFastVLine(point[0], point[1] - 22, 45, TFT_WHITE);
+  }
+  conferenceText("White target / purple touch", 234, 175, &fonts::Font0, DIM);
+  String pose = touchTest.rotation == 0 ? "Default" : touchTest.rotation == 2 ? "180 degrees" : "Sideways";
+  conferenceText(pose + " / held during test", 234, 196, &fonts::Font0, DIM);
+  if (touchTest.hasSample) {
+    conferenceText(String(touchTest.pressed ? "Touch " : "Last touch ") + touchTest.x + ", " + touchTest.y,
+      234, 282, &fonts::FreeSans9pt7b, ACCENT, 320);
+    conferenceText(touchTest.sensorSample ? String("Sensor ") + touchTest.rawX + ", " + touchTest.rawY : String("Simulated input"),
+      234, 306, &fonts::Font0, DIM);
+    // Clip only the marker for drawing; retain actual coordinates in the readout.
+    d.drawCircle(touchTest.x, touchTest.y, 9, ACCENT);
+    d.fillCircle(touchTest.x, touchTest.y, 3, ACCENT);
+  } else conferenceText("Your touch appears in purple", 234, 290, &fonts::Font0, DIM);
+  conferenceText("Either button: back", 234, 409, &fonts::FreeSans9pt7b, TFT_WHITE, 280);
+  conferenceText("Observation only / nothing saved", 234, 433, &fonts::Font0, DIM, 220);
 }
 static void conferenceSetupView() {
   auto &d = M5.Display;
@@ -235,7 +264,8 @@ static void conferenceSetupView() {
 static void conferenceRender() {
   auto &d = M5.Display;
   d.startWrite(); d.clearClipRect(); d.fillScreen(TFT_BLACK);
-  if (conferenceSetup) conferenceSetupView();
+  if (touchTest.active) conferenceTouchTestView();
+  else if (conferenceSetup) conferenceSetupView();
   else {
     switch (navigation.page) {
       case ConferencePage::Init: conferenceInit(); break;
@@ -250,7 +280,14 @@ static void conferenceRender() {
   d.endWrite(); d.display(); conferenceRedraw = false;
   conferenceLastFrame = millis(); ++conferenceFrames;
 }
+static void conferenceCloseTouchTest() {
+  touchTest.close(); navigation.cancel(); navigation.page = ConferencePage::Settings;
+  conferenceSuppressTouchUntilRelease = true;
+  conferenceOrientation.reset(conferenceOrientation.rotation());
+  conferenceRedraw = true;
+}
 static void conferenceStartSetup(const char *testPassword = nullptr) {
+  if (touchTest.active) return;
   navigation.cancel(); conferenceExpanded = false;
   conferenceSetupReturn = navigation.page == ConferencePage::Settings ? ConferencePage::Settings : ConferencePage::Badge;
   manualPortal.start(testPassword); conferenceSetup = manualPortal.active();
@@ -264,11 +301,13 @@ static void conferenceCloseSetup() {
   conferenceNotice(manualPortal.outcome() == ConferencePortalOutcome::Saved ? "Saved" : "Setup cancelled");
 }
 static void conferencePage(int direction) {
+  if (touchTest.active) { conferenceCloseTouchTest(); return; }
   if (conferenceSetup) { conferenceCloseSetup(); return; }
   navigation.nextPage(direction); conferenceExpanded = false; conferenceToast = ""; conferenceRedraw = true;
 }
 static void conferenceButton(BadgeButtonAction action) {
   if (action == BadgeButtonAction::NONE) return;
+  if (touchTest.active) { conferenceCloseTouchTest(); return; }
   if (conferenceSetup) { conferenceCloseSetup(); return; }
   if (action == BadgeButtonAction::SETTINGS) conferenceStartSetup();
   else conferencePage(conferencePusherDirection(action == BadgeButtonAction::BLUE, conferenceOrientation.rotation()));
@@ -286,6 +325,11 @@ static void conferenceTap(int x, int y) {
         M5.Display.setBrightness(badgeSettings.displayBrightness()); conferenceRedraw = true;
       }
     } else if (action == ConferenceSettingsAction::Connect) conferenceStartSetup();
+    else if (action == ConferenceSettingsAction::TouchTest) {
+      navigation.cancel(); conferenceToast = ""; conferenceExpanded = false;
+      conferenceOrientation.reset(conferenceOrientation.rotation());
+      touchTest.open(conferenceOrientation.rotation()); conferenceRedraw = true;
+    }
     else if (action >= ConferenceSettingsAction::Free) {
       auto mode = ConferenceOrientationMode(int(action) - int(ConferenceSettingsAction::Free));
       if (badgeSettings.setOrientation(mode, millis())) { conferenceOrientationPending = true; conferenceRedraw = true; }
@@ -313,6 +357,16 @@ static void conferenceStatus(const char *nonce = nullptr) {
     conferenceExpanded ? "true" : "false", conferenceSetup ? "true" : "false", unsigned(WiFi.getMode()), unsigned(WiFi.softAPgetStationNum()), unsigned(esp_bt_controller_get_status()),
     unsigned(conferenceOrientation.rotation()), manualProfile.avatarPixels() ? "true" : "false", manualProfile.ready() ? "true" : "false",
     conferenceClockValid() ? "true" : "false", M5.Rtc.isEnabled() ? "true" : "false", unsigned(conferenceFrames), unsigned(conferenceInputCount), unsigned(conferenceMaxGap), unsigned(ESP.getFlashChipSize()), unsigned(ESP.getPsramSize()), unsigned(M5.getBoard()), manualProfile.profile().name.length() ? "true" : "false", conference_clock::validNonce(nonce) ? nonce : "");
+}
+static void conferenceTouchTestStatus(const char *nonce) {
+  JsonDocument status;
+  status["active"] = touchTest.active; status["pressed"] = touchTest.pressed;
+  status["sample"] = touchTest.hasSample; status["sensor"] = touchTest.sensorSample;
+  status["x"] = touchTest.x; status["y"] = touchTest.y;
+  status["raw_x"] = touchTest.rawX; status["raw_y"] = touchTest.rawY;
+  status["rotation"] = touchTest.rotation;
+  status["nonce"] = conference_clock::validNonce(nonce) ? nonce : "";
+  Serial.print("TOUCH_TEST_STATUS "); serializeJson(status, Serial); Serial.println();
 }
 static void conferenceCapture() {
   // Setup includes ephemeral Wi-Fi credentials; never export that screen.
@@ -345,6 +399,7 @@ static void conferenceCommands() {
     if (conferenceClockCommand(cmd)) { conferenceRedraw = true; continue; }
     String op = cmd["op"] | "";
     if (op == "status") { if (cmd["reset_metrics"] | false) conferenceMaxGap = 0; conferenceStatus(cmd["nonce"] | static_cast<const char *>(nullptr)); }
+    else if (op == "touch_test_status") conferenceTouchTestStatus(cmd["nonce"] | static_cast<const char *>(nullptr));
     else if (op == "portal_status") {
       const auto &d = manualPortal.transportDiagnostics();
       JsonDocument status;
@@ -372,16 +427,20 @@ static void conferenceCommands() {
     } else if (op == "touch") {
       int x = cmd["x"] | -1, y = cmd["y"] | -1; String phase = cmd["phase"] | "";
       if (x < 0 || x >= 468 || y < 0 || y >= 468 || (phase != "begin" && phase != "move" && phase != "end")) { Serial.println("COMMAND_REJECTED"); continue; }
-      if (phase == "begin") navigation.begin(x, y, millis());
-      if (phase == "move" && navigation.move(x, y, !conferenceSetup) != ConferenceGesture::None) conferenceRedraw = true;
-      if (phase == "end") conferenceGestureEnd(x, y, millis(), true);
+      if (touchTest.active) {
+        if (touchTest.observe(x, y, phase != "end")) conferenceRedraw = true;
+      } else {
+        if (phase == "begin") navigation.begin(x, y, millis());
+        if (phase == "move" && navigation.move(x, y, !conferenceSetup) != ConferenceGesture::None) conferenceRedraw = true;
+        if (phase == "end") conferenceGestureEnd(x, y, millis(), true);
+      }
       if (conferenceRedraw) conferenceRender(); conferenceStatus();
     } else if (op == "setup_test") {
       // Input-only ephemeral AP password allows local verification without any credential export.
       String password = cmd["password"] | "";
       bool valid = password.length() >= 12 && password.length() <= 32;
       for (char c : password) if (!isalnum(static_cast<unsigned char>(c))) valid = false;
-      if (!valid || conferenceSetup) { Serial.println("COMMAND_REJECTED"); continue; }
+      if (!valid || conferenceSetup || touchTest.active) { Serial.println("COMMAND_REJECTED"); continue; }
       conferenceStartSetup(password.c_str()); password = "";
       Serial.printf("CONFERENCE_SETUP {\"active\":%s,\"ssid\":\"%s\"}\n", conferenceSetup ? "true" : "false", manualPortal.ssid().c_str());
     } else if (op == "initialize_conference_storage") {
@@ -433,18 +492,30 @@ void loop() {
   }
   auto button = conferenceButtons.update(M5.BtnA.isPressed(), M5.BtnB.isPressed(), millis());
   if (button != BadgeButtonAction::NONE) { ++conferenceInputCount; navigation.cancel(); conferenceButton(button); }
-  if (M5.Touch.getCount()) {
+  if (conferenceSuppressTouchUntilRelease && M5.Touch.getCount() == 0) conferenceSuppressTouchUntilRelease = false;
+  if (M5.Touch.getCount() && !conferenceSuppressTouchUntilRelease) {
     const auto &touch = M5.Touch.getDetail();
-    if (touch.wasPressed()) navigation.begin(touch.x, touch.y, millis());
-    if (touch.isPressed() && navigation.move(touch.x, touch.y, !conferenceSetup) != ConferenceGesture::None) conferenceRedraw = true;
-    if (touch.wasReleased()) { ++conferenceInputCount; conferenceGestureEnd(touch.x, touch.y, millis(), touch.wasClicked()); }
+    if (touchTest.active) {
+      if (touch.isPressed()) {
+        // Detail coordinates latch until the driver's flick threshold. Read the
+        // same raw sample and transform once to show even small finger movement.
+        auto raw = M5.Touch.getTouchPointRaw(); auto point = raw;
+        M5.Display.convertRawXY(&point, 1);
+        if (touchTest.observe(point.x, point.y, true, true, raw.x, raw.y)) conferenceRedraw = true;
+      }
+      if (touch.wasReleased()) { ++conferenceInputCount; if (touchTest.release()) conferenceRedraw = true; }
+    } else {
+      if (touch.wasPressed()) navigation.begin(touch.x, touch.y, millis());
+      if (touch.isPressed() && navigation.move(touch.x, touch.y, !conferenceSetup) != ConferenceGesture::None) conferenceRedraw = true;
+      if (touch.wasReleased()) { ++conferenceInputCount; conferenceGestureEnd(touch.x, touch.y, millis(), touch.wasClicked()); }
+    }
   }
-  if (conferenceOrientationPending && !navigation.touching() && M5.Touch.getCount() == 0) {
+  if (!touchTest.active && conferenceOrientationPending && !navigation.touching() && M5.Touch.getCount() == 0) {
     uint8_t rotation = badgeSettings.automatic() ? conferenceOrientation.rotation() : badgeSettings.fixedRotation();
     conferenceOrientation.reset(rotation); M5.Display.setRotation(rotation);
     conferenceOrientationPending = false; conferenceRedraw = true;
   }
-  if (badgeSettings.automatic() && !conferenceOrientationPending && M5.Imu.isEnabled() && uint32_t(millis() - conferenceLastImu) >= 50) {
+  if (!touchTest.active && badgeSettings.automatic() && !conferenceOrientationPending && M5.Imu.isEnabled() && uint32_t(millis() - conferenceLastImu) >= 50) {
     conferenceLastImu = millis();
     if (M5.Imu.update() & m5::IMU_Class::sensor_mask_accel) {
       auto data = M5.Imu.getImuData();
@@ -471,6 +542,6 @@ void loop() {
     conferenceLastPowerRead = millis(); conferenceRedraw = true;
   }
   if (!conferenceSetup && navigation.page == ConferencePage::Init && uint32_t(millis() - conferenceLastFrame) >= 125) conferenceRedraw = true;
-  if (conferenceRedraw) conferenceRender();
+  if (conferenceRedraw && (!touchTest.active || uint32_t(millis() - conferenceLastFrame) >= 33)) conferenceRender();
   delay(8);
 }

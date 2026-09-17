@@ -35,6 +35,11 @@
   and Cancel. Settings-launched setup returns to Settings. Schedule intervals use
   absolute UTC; untimed placeholders never become current. Keep all input/setup/
   save deadlines on monotonic time, independent of clock corrections.
+- Settings → Touch test is an observation-only modal: five white crosshairs,
+  live purple sensor marker retained on release, and current rotation frozen
+  without changing the saved mode. Either pusher or the chord returns to Settings.
+  Never apply calibration, save touch data, or start networking from this test.
+  Label simulated inputs; they cannot verify physical sensor alignment.
 - Build once for a batch; each flash provisions and verifies a fresh hardware RTC
   time and storage/radio readiness. Preserve the partition layout and user state.
   Every flash must first compare the current partition sector with the compiled

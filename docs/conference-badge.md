@@ -19,7 +19,8 @@ The six primary pages wrap in this fixed order:
    Swipe vertically through GitHub, X/Twitter and LinkedIn, including empty slots.
 5. **Hack your Badge**: real QR to `https://drop.workos.cloud/stopwatch`.
 6. **Settings**: battery percentage, brightness, local date/time, phone setup,
-   and orientation. All controls fit on one page; no settings scrolling is needed.
+   touch test, and orientation. All controls fit on one page; no settings
+   scrolling is needed.
 
 The 468×468 framebuffer retains static side chevrons, top clock, bottom page
 name, and six dots. Useful content and QR quiet zones remain inside the round
@@ -30,8 +31,9 @@ Screen-left/right pushers page backward/forward at rotations 0 and 2. In the
 lanyard-up rotation 2, **blue is previous and yellow is next**. In rotation 0,
 yellow is previous and blue next. At quarter turns, the pushers are top/bottom;
 use the stock yellow-previous/blue-next convention. Side arrows also accept a
-completed tap, and a horizontal swipe pages. Both pushers open setup. Either
-pusher or the on-screen Back/cancel button closes setup.
+completed tap, and a horizontal swipe pages. Both pushers open setup from the
+primary pages. Either pusher or the on-screen Back/cancel button closes setup.
+Inside Touch test, either pusher or both together instead return to Settings.
 
 Schedule drag scrolling is clipped above the footer; the last row is reachable.
 Badge vertical swipes change only the network slot. The selected network is saved
@@ -78,6 +80,28 @@ intervals, invalid clocks and untimed rows have no current selection. Display
 timezone offsets never alter those UTC comparisons. Forward/backward clock
 corrections re-evaluate selection without moving the user's scroll position.
 The shipped placeholder rows remain untimed; no real agenda has been invented.
+
+## Touch alignment test
+
+Open **Settings → Touch test** to compare five white crosshair targets with the
+live purple position reported by the touch sensor. Touch or drag over the top,
+center, bottom, left and right targets. The final marker and coordinate readout
+remain visible after release so the finger does not obscure the result.
+
+The current display rotation is held for the duration of the test without
+changing the saved orientation mode. Either physical pusher, or both together,
+returns to Settings. Choose **Default** or **180°**, let the display rotate, then
+reopen the test to compare those poses. The test does not calibrate the sensor,
+save touch data, or start Wi-Fi or Bluetooth.
+
+The live marker uses a copy of M5Unified's raw sample transformed once by M5GFX;
+normal gesture coordinates can remain latched until the flick threshold.
+Serial `touch` input exercises the test display but is labeled **Simulated input**.
+It verifies dispatch and rendering, not sensor alignment. Physical alignment
+and any remaining offset still require the user's observation on the device.
+`touch_test_status` returns active/pressed/sample flags, sensor-versus-simulated
+source, screen/raw coordinates, held rotation, and an optional valid hex nonce.
+It reads only the temporary test state and does not activate the test.
 
 ## Local customization
 

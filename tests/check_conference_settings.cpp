@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include "../firmware/devices_badge/conference_settings.h"
+#include "../firmware/devices_badge/conference_touch_test.h"
 #include "../firmware/devices_badge/conference_navigation.h"
 #include "../firmware/devices_badge/orientation_filter.h"
 
@@ -42,12 +43,32 @@ int main() {
   assert(nav.end(342, 167, 600) == ConferenceGesture::Tap);
   assert(conferenceSettingsHit(342, 167) == ConferenceSettingsAction::Brighter);
   assert(conferenceSettingsHit(126, 167) == ConferenceSettingsAction::Dimmer);
-  assert(conferenceSettingsHit(234, 272) == ConferenceSettingsAction::Connect);
+  assert(conferenceSettingsHit(154, 272) == ConferenceSettingsAction::Connect);
+  assert(conferenceSettingsHit(314, 272) == ConferenceSettingsAction::TouchTest);
+  assert(conferenceSettingsHit(234, 272) == ConferenceSettingsAction::None);
   assert(conferenceSettingsHit(136, 362) == ConferenceSettingsAction::Free);
   assert(conferenceSettingsHit(234, 362) == ConferenceSettingsAction::Default);
   assert(conferenceSettingsHit(332, 362) == ConferenceSettingsAction::Opposite);
   assert(conferenceSettingsHit(234, 400) == ConferenceSettingsAction::None);
   assert(conferenceSettingsHit(234, 330) == ConferenceSettingsAction::None);
+
+  ConferenceTouchTest touchTest;
+  assert(!touchTest.observe(100, 350, true));
+  touchTest.open(2);
+  assert(touchTest.active && !touchTest.hasSample && touchTest.rotation == 2);
+  assert(touchTest.observe(234, 362, true, true, 116, 52));
+  assert(!touchTest.observe(234, 362, true, true, 116, 52));
+  // Tiny motion is visible without waiting for a flick or completed tap.
+  assert(touchTest.observe(235, 364, true, true, 116, 51));
+  assert(touchTest.release() && !touchTest.pressed && touchTest.hasSample);
+  assert(touchTest.x == 235 && touchTest.y == 364 && touchTest.sensorSample);
+  assert(!touchTest.release());
+  assert(touchTest.observe(237, 366, false) && !touchTest.sensorSample);
+  // Out-of-range readings remain honest instead of snapping to a target/edge.
+  assert(touchTest.observe(-3, 474, true, true, 235, -3));
+  assert(touchTest.x == -3 && touchTest.y == 474);
+  touchTest.close(); assert(!touchTest.observe(1, 2, true));
+  touchTest.open(0); assert(!touchTest.hasSample && !touchTest.pressed && !touchTest.sensorSample);
 
   OrientationFilter orientation;
   orientation.reset(2);
