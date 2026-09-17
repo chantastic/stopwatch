@@ -1,5 +1,11 @@
 # After Dark reveal verification — September 17, 2026
 
+> The results below describe the initial daily-cutoff build `bb366d3`. The user
+> subsequently clarified that the reveal must use the fixed October 7, 2026,
+> 13:30 local cutoff. See the date-cutoff correction section below for current
+> results. The initial build's stored unlock is preserved on the development
+> badge; its already-unlocked state cannot verify fresh-before-event hiding.
+
 This development change adds the hidden invitation to the native factory stack.
 Its readiness protocol remains `conference-factory-3`; it is not a new published
 firmware release. The installed application is 1,678,752 bytes, SHA-256
@@ -49,3 +55,27 @@ Private evidence is under `.build/after-dark-verification/`, alongside
 `.build/after-dark-{build,tests,flash}.log` in the WorkOS checkout. Binaries,
 captures and diagnostic output are not committed. The public installer and Alto
 deployment remain unchanged.
+
+## Date-cutoff correction
+
+The current policy uses October 7, 2026, 13:30 in the badge's configured local
+time as a fixed cutoff. Fresh instances unlock at every later time, including
+the following midnight/morning; earlier evenings remain hidden. The existing
+versioned NVS key/encoding is preserved so earned unlocks are retained.
+
+The revised policy passed ASan/UBSan checks for every minute across nine dates,
+every following-day hour across six offsets, the exact second before/at the
+cutoff, invalid clocks/offsets and integer extremes. Existing persistence and
+monotonic retry checks also passed. These are host simulations of fresh badges.
+
+The corrected native build passed and was installed through the guarded flash
+wrapper, including partition/hash checks, fresh clock/RTC provisioning and
+`UNIT_READY`. Application size is 1,678,864 bytes, SHA-256
+`68226dc9105aa61acf8801e6e35fa0d67a91e781756e943c7e77ac6076a2eba8`.
+Fresh USB status confirmed the development badge retained its previously stored
+unlock, clock and storage were ready, and both radios were off. It was left on
+After Dark. No saved state was reset to manufacture a fresh-device test.
+
+Private evidence: `.build/after-dark-date-{build,flash}.log` and
+`.build/after-dark-verification/date-correction.json`. Public release and website
+pins remain unchanged.

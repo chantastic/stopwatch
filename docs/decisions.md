@@ -14,8 +14,9 @@ precedence when a later change updates these decisions.
 ## Product direction
 
 - September 17: make Developers After Dark a hidden Easter egg, revealed by
-  entering Morse `init` on either pusher or by 1:30 PM local time. The implemented
-  time rule repeats daily like the agenda; either reveal persists across restart
+  entering Morse `init` on either pusher or at/after October 7, 2026, 1:30 PM
+  local time. This is a fixed date/time cutoff, including later mornings on a
+  fresh badge; only the agenda repeats daily. Either reveal persists across restart
   and clock corrections. Hide its dot until revealed, retain normal pusher
   navigation, and keep setup/Touch test isolated from code entry.
 

@@ -67,10 +67,12 @@ are 50–599 ms; letter pauses are 600–2999 ms; a whole attempt must finish wi
 start a new code. These are monotonic timers, unaffected by phone/USB clock sync.
 USB `button` actions do not represent hold durations and cannot enter Morse.
 
-The automatic reveal currently follows the agenda's **daily local-time rule**:
-the first valid clock reading at or after **1:30 PM**, on any date, unlocks it.
-Booting or flashing after that time reveals it immediately. There is no October 7
-date restriction. An unset clock keeps it hidden, but Morse still works.
+The automatic reveal has a fixed date/time cutoff: **October 7, 2026 at 1:30 PM
+in the badge's configured local time**. Any valid clock reading at or after that
+instant unlocks it, including a fresh badge first started the next morning,
+midnight, or a later date. Earlier dates never trigger it, even after 1:30 PM.
+The agenda still repeats daily; this reveal does not. An unset clock keeps it
+hidden, but Morse still works.
 The timed reveal adds the page and its dot without changing the current view,
 scroll position, or modal. Settings remains the last page. Stable internal IDs
 remain 0–5; navigation skips ID 2 until revealed.

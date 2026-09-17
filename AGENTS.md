@@ -51,8 +51,9 @@
   current rows say On now, passed rows are dimmed, and invalid time marks neither.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - After Dark is hidden from navigation and dots until either pusher enters Morse
-  `init` (`.. -. .. -`, one pusher per attempt) or valid local time reaches 13:30
-  on any day. Persist the reveal in its separate versioned NVS byte. Timed reveal
+  `init` (`.. -. .. -`, one pusher per attempt) or valid local date/time reaches
+  October 7, 2026 at 13:30. Every later date/time qualifies, including mornings
+  on a fresh badge. Persist the reveal in its separate versioned NVS byte. Timed reveal
   must not move the current page/scroll; code success opens the invite. Setup,
   Touch test and chords cancel recognition. Keep stable page IDs and ordinary
   pusher paging. See `docs/conference-badge.md` for timing and persistence rules.

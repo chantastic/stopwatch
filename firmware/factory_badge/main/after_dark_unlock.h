@@ -1,11 +1,14 @@
 #pragma once
-#include "schedule.h"
+#include "clock_service.h"
 #include <cstdint>
 
 // Product policy only: the main task supplies checked time, physical Morse
 // recognition and NVS persistence. No hardware or view ownership lives here.
 namespace badge_after_dark {
-inline constexpr int UnlockMinute = 13 * 60 + 30;
+// 2026-10-07 13:30 in the badge's configured local time. This is a local
+// calendar value encoded as epoch seconds, not the UTC instant of the event.
+// Subtract the saved display offset before comparing with the checked UTC clock.
+inline constexpr int64_t UnlockLocalEpoch = 1791379800LL;
 
 class Unlock {
 public:
@@ -37,7 +40,9 @@ public:
     }
 
     bool updateClock(int64_t utc, int offsetMinutes, bool valid, uint32_t now) {
-        if (unlocked_ || badge_schedule::localMinute(utc, offsetMinutes, valid) < UnlockMinute)
+        if (unlocked_ || !valid || utc < badge_clock::MinEpoch || utc >= badge_clock::MaxEpoch ||
+            offsetMinutes < -840 || offsetMinutes > 840 ||
+            utc < UnlockLocalEpoch - int64_t(offsetMinutes) * 60)
             return false;
         return unlock(now);
     }
