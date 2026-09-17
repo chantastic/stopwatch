@@ -13,6 +13,7 @@ struct FakeMicConfig {
 struct FakeMic {
   FakeMicConfig cfg;
   std::atomic<bool> failBegin{false},failRecord{false},neverStarts{false};
+  bool completeImmediately=false;
   std::atomic<bool> gateBegin{false},beginEntered{false},gateWrite{false},gateTail{false};
   std::atomic<bool> ownsBuffer{false},running{false},endEntered{false};
   std::atomic<unsigned> recordings{0},begins{0},ends{0};

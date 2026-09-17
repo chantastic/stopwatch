@@ -179,7 +179,8 @@ test("provision verifies a fresh clock, advancing RTC, and readiness in order", 
   assert.deepEqual(await drive(conn.provision(BUILD)), { ...ready(), nonce: port.writes[2].nonce });
   assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status"]);
   assert.equal(new Set(port.writes.map(request => request.nonce)).size, 3);
-  assert.equal(port.writes[0].offset_minutes, -new Date().getTimezoneOffset());
+  // JSON serializes negative zero as zero on UTC machines.
+  assert.equal(port.writes[0].offset_minutes, -new Date().getTimezoneOffset() || 0);
 });
 
 test("startup retries refresh browser time and nonce instead of replaying old clock data", async t => {
