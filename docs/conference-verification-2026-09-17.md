@@ -1,5 +1,30 @@
 # Conference Settings verification — September 17, 2026
 
+## Follow-up: fixed orientation labels corrected
+
+After device feedback on the initial `2dcd246` release, the fixed choices now
+use **Default → rotation 0** and **180° → rotation 2**. The earlier observations
+below describe the initial release's opposite mapping. Free calibration,
+touch-release gating, physical pager mapping and saved preference encoding are
+unchanged; saved fixed mode names now select their corrected poses.
+
+The complete host suite and firmware build pass. The ordinary guarded upload
+matched the existing partition map, verified writes, and returned fresh RTC
+`UNIT_READY` without initializing storage. Actual-firmware USB dispatch checks
+confirmed both corrected fixed rotations, selection only after release, physical
+pager mapping by displayed rotation, and both modes surviving restart. These are
+diagnostic inputs, not a physical touch or moved-board test. The initial Free
+mode, 50% brightness and init() page were restored; profile metadata and network
+selection remained unchanged, with both radios off.
+
+The corrected application SHA-256 is
+`fc187bc953a28b265d37707688a59465e8ae5bfcd46f50350d2ced48992bdf06`.
+Private evidence: `.build/orientation-correction-verification.json`,
+`.build/orientation-tests.log`, `.build/orientation-build.log`, and
+`.build/orientation-flash.log`. Phone acceptance limits below remain unchanged.
+
+## Initial Settings release
+
 Primary checkout: `/Users/chan/Developer/m5stack-conference-badge`, branch
 `codex/offline-conference-badge`, following scaffold commit `d1ac792`.
 Runtime build: `conference-settings-2`. This report covers one development

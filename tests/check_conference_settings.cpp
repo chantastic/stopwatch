@@ -21,11 +21,11 @@ int main() {
   settings.saveFailed(700); assert(!settings.saveDue(5699) && settings.saveDue(5700));
   settings.saved();
   assert(settings.setOrientation(ConferenceOrientationMode::Default, 100));
-  assert(settings.fixedRotation() == 2 && !settings.automatic());
-  assert(restored.restore(settings.encoded()) && restored.fixedRotation() == 2 && restored.brightness == 90 && !restored.pending());
+  assert(settings.fixedRotation() == 0 && !settings.automatic());
+  assert(restored.restore(settings.encoded()) && restored.fixedRotation() == 0 && restored.brightness == 90 && !restored.pending());
   assert(!settings.setOrientation(ConferenceOrientationMode(3), 200));
   assert(settings.setOrientation(ConferenceOrientationMode::Opposite, 200));
-  assert(settings.fixedRotation() == 0 && restored.restore(settings.encoded()) && restored.fixedRotation() == 0);
+  assert(settings.fixedRotation() == 2 && restored.restore(settings.encoded()) && restored.fixedRotation() == 2);
   assert(settings.setOrientation(ConferenceOrientationMode::Free, 300) && settings.automatic());
   assert(conferencePusherDirection(true, 2) == -1 && conferencePusherDirection(false, 2) == 1);
   assert(conferencePusherDirection(true, 0) == 1 && conferencePusherDirection(false, 0) == -1);

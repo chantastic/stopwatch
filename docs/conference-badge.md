@@ -55,8 +55,9 @@ The existing selected-network preference remains separate. Changes made just
 before power loss may not have reached the delayed save yet.
 
 Orientation has exactly three choices: **Free** resumes calibrated automatic
-rotation in all four directions; **Default** fixes rotation 2, the normal lanyard
-pose; **180°** fixes rotation 0. Default is a named fixed pose, not the orientation
+rotation in all four directions; **Default** fixes the stock rotation 0;
+**180°** fixes rotation 2, the lanyard-up pose. These fixed choices were swapped
+after the user's September 17 device feedback. Default is a named fixed pose, not the orientation
 at the moment of selection. The selected mode survives restart. Startup in Free
 begins at rotation 2 until fresh IMU readings settle. Switching modes clears old
 filter candidates and waits until navigation and physical touch are fully

@@ -30,7 +30,7 @@
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
 - Settings is the final page, after Hack your Badge. Brightness has a visible
   minimum and delayed persistent saves. Orientation is exactly Free (automatic),
-  Default (rotation 2), or 180° (rotation 0); apply changes after touch release.
+  Default (rotation 0), or 180° (rotation 2); apply changes after touch release.
   Phone setup synchronizes a fresh browser clock independently of profile Save
   and Cancel. Settings-launched setup returns to Settings. Schedule intervals use
   absolute UTC; untimed placeholders never become current. Keep all input/setup/

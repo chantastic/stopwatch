@@ -21,7 +21,7 @@ to expand its QR; press both pushers to edit it.
 
 Settings shows battery percentage, persistent brightness, date/time and a
 **Connect phone** action. Orientation choices are **Free** (automatic),
-**Default** (lanyard-up), and **180°** (the opposite pose). Opening phone setup
+**Default** (stock orientation), and **180°** (lanyard-up). Opening phone setup
 automatically synchronizes its fresh clock, independently of saving profile
 edits. A successful clock sync is retained even if those edits are cancelled.
 The actual phone flow still needs the acceptance check described in the

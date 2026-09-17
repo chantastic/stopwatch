@@ -119,10 +119,10 @@ def main():
         assert pressed["orientation_mode"] == before["orientation_mode"]
         device.touch("end", 234, 362)
         result = settled()
-        assert result["orientation_mode"] == "Default" and result["rotation"] == 2
+        assert result["orientation_mode"] == "Default" and result["rotation"] == 0
         device.capture(out / "settings-default-minimum.png")
         result = reboot()
-        assert result["brightness_percent"] == 10 and result["orientation_mode"] == "Default" and result["rotation"] == 2
+        assert result["brightness_percent"] == 10 and result["orientation_mode"] == "Default" and result["rotation"] == 0
         device.page(5)
         buttons()
         report["default_and_minimum_persist"] = True
@@ -131,9 +131,9 @@ def main():
         assert device.tap(342, 167)["brightness_percent"] == 100
         device.tap(332, 362)
         result = settled()
-        assert result["orientation_mode"] == "180°" and result["rotation"] == 0
+        assert result["orientation_mode"] == "180°" and result["rotation"] == 2
         result = reboot()
-        assert result["brightness_percent"] == 100 and result["orientation_mode"] == "180°" and result["rotation"] == 0
+        assert result["brightness_percent"] == 100 and result["orientation_mode"] == "180°" and result["rotation"] == 2
         device.page(5)
         device.capture(out / "settings-opposite-maximum.png")
         buttons()

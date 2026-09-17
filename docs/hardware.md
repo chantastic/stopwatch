@@ -119,6 +119,9 @@ device's loop-up physical calibration produced native accelerometer X near
 user confirmed the display looked correct.
 
 The important axis mapping is **native Y → screen X, native X → screen Y**.
+In the current Settings menu, **Default** selects stock rotation 0 and **180°**
+selects this lanyard-up rotation 2, following the user's September 17 correction.
+These labels do not change the automatic orientation calibration.
 `updateOrientation()` deliberately calls:
 
 ```cpp

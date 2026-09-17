@@ -50,7 +50,7 @@ class ConferenceSettings {
   void saved() { dirty_ = false; }
   void saveFailed(uint32_t now) { changedAt_ = now; waitMs_ = 5000; }
   bool automatic() const { return orientation == ConferenceOrientationMode::Free; }
-  uint8_t fixedRotation() const { return orientation == ConferenceOrientationMode::Default ? 2 : 0; }
+  uint8_t fixedRotation() const { return orientation == ConferenceOrientationMode::Default ? 0 : 2; }
   const char *orientationName() const { return automatic() ? "Free" : orientation == ConferenceOrientationMode::Default ? "Default" : "180°"; }
  private:
   bool dirty_ = false;
