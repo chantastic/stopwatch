@@ -1,5 +1,13 @@
 # Decisions and lessons
 
+> **Current application: offline conference scaffold (September 16, 2026).**
+> Read [conference-badge.md](conference-badge.md) for the current five-page UI,
+> manual setup, radio policy and storage model, and
+> [conference-clock.md](conference-clock.md) for repeatable flashing.
+> The connected badge/voice behavior below is the retained historical application.
+> Hardware geometry, pin assignments, calibrated IMU mapping, dependency pins,
+> and partition-preservation constraints remain applicable.
+
 Baseline: September 11, 2026, firmware commit `76eac2c`. Current code takes
 precedence when a later change updates these decisions.
 

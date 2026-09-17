@@ -13,7 +13,7 @@ if [[ "$(uname -s)" != Darwin ]]; then
 fi
 mkdir -p "$REPO_ROOT/.build/tests"
 FLAGS=(-std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer)
-for name in account_paging badge_styles button_gesture orientation_filter profile_urls voice_reply_state; do
+for name in account_paging badge_styles button_gesture orientation_filter profile_urls voice_reply_state conference_navigation; do
   "$CXX" "${FLAGS[@]}" "$REPO_ROOT/tests/check_$name.cpp" -o "$REPO_ROOT/.build/tests/$name"
   "$REPO_ROOT/.build/tests/$name"
 done
@@ -34,3 +34,12 @@ done
 export CXX
 python3 "$REPO_ROOT/tests/profile-scheduler-check/run.py"
 python3 "$REPO_ROOT/tests/voice-controller-host/run.py"
+
+bash "$REPO_ROOT/tests/conference-profile-host/run.sh"
+
+"$CXX" "${FLAGS[@]}" -I"$REPO_ROOT/tests/conference-clock-host" -I"$ARDUINOJSON_INCLUDE" \
+  "$REPO_ROOT/tests/conference-clock-host/check.cpp" -o "$REPO_ROOT/.build/tests/conference-clock"
+"$REPO_ROOT/.build/tests/conference-clock"
+python3 "$REPO_ROOT/tests/test_provision_clock.py"
+python3 "$REPO_ROOT/tests/check_flash_layout.py"
+python3 "$REPO_ROOT/tests/test_flash_clock.py"

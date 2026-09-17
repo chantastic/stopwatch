@@ -1,5 +1,13 @@
 # Privacy and local storage
 
+> **Current application: offline conference scaffold (September 16, 2026).**
+> Read [conference-badge.md](conference-badge.md) for the current five-page UI,
+> manual setup, radio policy and storage model, and
+> [conference-clock.md](conference-clock.md) for repeatable flashing.
+> The connected badge/voice behavior below is the retained historical application.
+> Hardware geometry, pin assignments, calibrated IMU mapping, dependency pins,
+> and partition-preservation constraints remain applicable.
+
 This firmware is configured for chan.dev's Production Devices application. Each signed-in user sees their own connected profiles. The repository contains source and public configuration; device credentials and personal test captures are kept outside it.
 
 ## Where data lives

@@ -1,5 +1,13 @@
 # Development and device checks
 
+> **Current application: offline conference scaffold (September 16, 2026).**
+> Read [conference-badge.md](conference-badge.md) for the current five-page UI,
+> manual setup, radio policy and storage model, and
+> [conference-clock.md](conference-clock.md) for repeatable flashing.
+> The connected badge/voice behavior below is the retained historical application.
+> Hardware geometry, pin assignments, calibrated IMU mapping, dependency pins,
+> and partition-preservation constraints remain applicable.
+
 Read [hardware.md](hardware.md) and [decisions.md](decisions.md) before changing
 board configuration, input handling, account behavior, or rendering. This guide
 records the workflow established with the physical StopWatch; it does not assume

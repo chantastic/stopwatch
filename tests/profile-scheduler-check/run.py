@@ -7,7 +7,7 @@ out.mkdir(parents=True,exist_ok=True)
 arduinojson=Path(os.environ.get('ARDUINOJSON_INCLUDE',str(Path.home()/'Documents/Arduino/libraries/ArduinoJson/src')))
 if not (arduinojson/'ArduinoJson.h').is_file():
  raise SystemExit('Set ARDUINOJSON_INCLUDE to the ArduinoJson 7.4.3 src directory.')
-ino=(root/'firmware/devices_badge/devices_badge.ino').read_text()
+ino=(root/'firmware/devices_badge/legacy_connected_app.h').read_text()
 profile=(root/'firmware/devices_badge/profile.h').read_text()
 def extract(source,name):
  import re
@@ -46,7 +46,7 @@ functions.append(('restoreBootIdentity','void restoreBootIdentity() {\n'+boot+'}
 assert 'authenticated=false' in ino.split('void clearProfile')[0]
 generated=(fixtures/'fixture-prefix.cpp').read_text()+'\n\n'.join(body for _,body in functions)+'\n'+(fixtures/'fixture-tests.cpp').read_text()
 (out/'generated.cpp').write_text(generated)
-metadata={'sources':{name:hashlib.sha256((root/name).read_bytes()).hexdigest() for name in ['firmware/devices_badge/devices_badge.ino','firmware/devices_badge/profile.h','firmware/devices_badge/profile_urls.h','firmware/devices_badge/account_paging.h']},'functions':{name:hashlib.sha256(body.encode()).hexdigest() for name,body in functions}}
+metadata={'sources':{name:hashlib.sha256((root/name).read_bytes()).hexdigest() for name in ['firmware/devices_badge/legacy_connected_app.h','firmware/devices_badge/profile.h','firmware/devices_badge/profile_urls.h','firmware/devices_badge/account_paging.h']},'functions':{name:hashlib.sha256(body.encode()).hexdigest() for name,body in functions}}
 (out/'source-manifest.json').write_text(json.dumps(metadata,indent=2)+'\n')
 subprocess.run([os.environ.get('CXX','clang++'),'-std=c++17','-fsanitize=address,undefined','-g','-I'+str(root/'tests/background-http-host'),'-I'+str(arduinojson),str(out/'generated.cpp'),'-o',str(out/'check')],check=True)
 result=subprocess.run([str(out/'check')],check=True,text=True,capture_output=True)

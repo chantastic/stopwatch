@@ -1,5 +1,13 @@
 # Hardware and interaction notes
 
+> **Current application: offline conference scaffold (September 16, 2026).**
+> Read [conference-badge.md](conference-badge.md) for the current five-page UI,
+> manual setup, radio policy and storage model, and
+> [conference-clock.md](conference-clock.md) for repeatable flashing.
+> The connected badge/voice behavior below is the retained historical application.
+> Hardware geometry, pin assignments, calibrated IMU mapping, dependency pins,
+> and partition-preservation constraints remain applicable.
+
 This project targets the **M5Stack StopWatch**, not an arbitrary ESP32 development
 board. These notes preserve findings from the September 2026 device sessions.
 Current firmware and the pinned dependencies in [README](../README.md) are the
@@ -45,9 +53,10 @@ verification has used both the full image and a 232-pixel-radius circular
 aperture. Preserve quiet zones and keep useful content inside the visible circle.
 
 The product documents ES8311 audio, an AW8737A speaker amplifier, RX8130CE RTC,
-and vibration hardware. Firmware enables the internal IMU and configures the
-microphone for explicitly requested voice recording. Internal RTC and speaker
-initialization remain disabled; vibration and battery runtime are not validated.
+and vibration hardware. Current conference firmware enables the internal IMU
+and RTC; microphone and speaker initialization are disabled. The retained
+connected application configures its microphone for requested voice recording
+and did not initialize the RTC. Vibration and battery runtime are not validated.
 The board's power controller handles its separate power button. See
 [voice replies](voice-replies.md) for recording limits and verification status.
 

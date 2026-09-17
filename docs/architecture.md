@@ -1,5 +1,13 @@
 # Architecture
 
+> **Current application: offline conference scaffold (September 16, 2026).**
+> Read [conference-badge.md](conference-badge.md) for the current five-page UI,
+> manual setup, radio policy and storage model, and
+> [conference-clock.md](conference-clock.md) for repeatable flashing.
+> The connected badge/voice behavior below is the retained historical application.
+> Hardware geometry, pin assignments, calibrated IMU mapping, dependency pins,
+> and partition-preservation constraints remain applicable.
+
 The StopWatch renders and caches the badge locally. WorkOS supplies device authorization and sessions; chan.dev's existing identity service retrieves the signed-in user's connected social profiles through Pipes.
 
 ```mermaid

@@ -17,12 +17,30 @@
 ## Established constraints
 
 - Active firmware is the Arduino sketch in `firmware/devices_badge/`.
+- Current product is the **offline conference badge**. Read
+  [conference-badge.md](docs/conference-badge.md) and
+  [conference-clock.md](docs/conference-clock.md). The five-page UI supersedes
+  the connected badge/voice controls below; that previous application is retained
+  in `legacy_connected_app.h` and Git history and is not compiled into this build.
+- Normal operation has Wi-Fi and Bluetooth off. Temporary setup is AP-only,
+  with manual name/social fields and image upload. Never load authenticated
+  identity caches into the manual conference model or require a cloud login.
+- Physical screen-left/right pushers are previous/next at rotations 0 and 2;
+  loop-up rotation 2 means blue previous / yellow next. Both open setup; either
+  exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
+- Build once for a batch; each flash provisions and verifies a fresh hardware RTC
+  time and storage/radio readiness. Preserve the partition layout and user state.
+  Every flash must first compare the current partition sector with the compiled
+  map. Factory/different layouts require a separately authorized migration.
+  Explicit filesystem initialization applies only to the verified existing map
+  and erases ONLY `ffat`; never run it on the provisioned development board or add
+  automatic format-on-error.
 - Active gateway source is `/Users/chan/Developer/chan-services/apps/devices`.
   The private `chantastic/chan-services` monorepo owns service deployments; read
   its `docs/deployment.md` before gateway work. `gateway/` here and the standalone
   `../devices.chan.dev` repository are retained historical snapshots. Do not
   implement or deploy gateway changes from those copies. Firmware stays here.
-- This prototype intentionally connects to the existing chan.dev Production
+- The retained connected prototype intentionally connects to chan.dev Production
   Devices application. Any signed-in Production user uses their own account and
   personal connections. Shared Auth, Pipes integration, Social and the narrow
   Devices gateway share the services monorepo but retain separate Workers and
@@ -40,11 +58,10 @@
 - `scripts/flash.sh PORT` rebuilds and uploads application components. Firmware
   changes should preserve the partition layout and saved user state.
 - Avatar and profile behavior must remain dynamic. Avoid static personal assets.
-- Keep one `init()` ASCII layout for each account. Blue changes accounts; yellow
-  is reserved for future styles and currently leaves the badge unchanged. Both
-  pushers open Settings, and either pusher returns from Settings to the badge.
-  Touch uses completed taps on release; keep orientation handling intact.
-- The X replies app opens from Settings and owns its own blue-hold recording
+- Historical connected application: one `init()` ASCII layout per account;
+  blue changes accounts and yellow is reserved. Both open Settings. Those rules
+  are not the conference controls. Touch uses completed taps on release.
+- The historical X replies app opens from Settings and owns its blue-hold recording
   gesture. Read [voice-replies.md](docs/voice-replies.md) before changing this flow.
   Sending requires a fresh tap on Send after reviewing every transcript page.
   Preserve unresolved send receipts across Back, sign-in changes, and restart;
