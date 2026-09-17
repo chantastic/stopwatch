@@ -1,0 +1,66 @@
+name: Report a bug
+description: Something on the badge, installer, or website is not working as expected.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Include enough detail for someone else to repeat the problem. Please omit Wi-Fi passwords, personal photos, account data, and raw serial logs. The installer's **Copy build details** output is designed for sharing here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where is the problem?
+      options:
+        - Badge pages or controls
+        - Phone setup or profile storage
+        - Clock or schedule
+        - Browser installer
+        - Website or instructions
+        - Build or developer tools
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened, and what did you expect?
+      placeholder: Describe the visible result and the result you wanted.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start from…
+        2. Tap or select…
+        3. Observe…
+    validations:
+      required: true
+  - type: dropdown
+    id: evidence
+    attributes:
+      label: Where did you observe this?
+      options:
+        - Physical StopWatch badge
+        - Browser or phone, without a connected badge
+        - Host test or simulated input
+        - Build or code inspection
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Include the firmware build ID or commit if known, browser/OS, phone model, and badge orientation when relevant.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Badge details (optional)
+      description: Paste the installer's Copy build details output. Do not paste raw device logs.
+      render: json
+  - type: textarea
+    id: frequency
+    attributes:
+      label: Frequency and workaround
+      placeholder: Every time or occasionally? Does restarting, reconnecting, or another action help?
+

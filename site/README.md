@@ -1,5 +1,11 @@
 # WorkOS init() StopWatch guide
 
+Team source is the `site/` directory in private
+[workos/stopwatch](https://github.com/workos/stopwatch). Propose changes there and
+use [the root promotion runbook](../docs/site-promotion.md) to publish a reviewed
+commit to the existing Alto application. The older standalone checkout remains
+a publication history/reference, not a second place to develop changes.
+
 Static technical reference plus a downloadable agent skill. The site follows system light/dark appearance through CSS, including the official logos, without requiring JavaScript or a saved preference. Site source uses no external scripts, fonts, analytics, or runtime dependencies; the hosting layer may inject its own analytics beacon.
 
 ## Run
@@ -73,7 +79,13 @@ The production entry is `src/index.ts`, a Cloudflare Worker. `npm run build` pac
 
 `alto.json` declares `/stopwatch` and `/llms.txt` as public surfaces. Everything under `/stopwatch`, including both official logos and `SKILL.md`, is available without sign-in. The page also lives at `https://stopwatch.workos.cloud/`, where Alto currently requires authentication. Alto rejects `"/": "public"` with `public-root-surface`; the public `/stopwatch` alias is retained until the platform supports anonymous root surfaces. Asset and skill URLs remain stable under `/stopwatch`.
 
-Alto application: `01M2P6VWDZ9GVRJH1ACT7RN7F5` (`stopwatch`). Source remote: `https://git.workos.cloud/stopwatch.git`. The local Git credential helper uses `alto auth git-credential`; never put credentials in the remote URL. After the changes and release assets are approved, push the reviewed commit to `origin main`, then use `alto deploy stopwatch --sha <commit> --no-push --json` to wait for its managed build and promote it. Verify `alto hosting stopwatch --json` and the anonymous public URLs. Do not run `wrangler deploy` without `--dry-run`.
+Alto application: `01M2P6VWDZ9GVRJH1ACT7RN7F5` (`stopwatch`). Publication remote:
+`https://git.workos.cloud/stopwatch.git`. Git credentials come from
+`alto auth git-credential`; never put them in the remote URL. From the team
+repository, use `scripts/promote-site.sh` as documented in the root runbook.
+The explicit publish action pushes the reviewed site tree to Alto main, which
+starts production publication. Verify hosting and the anonymous public URLs.
+Do not run `wrangler deploy` without `--dry-run`.
 
 After verifying the standalone installer, publish the generated HTML to the
 existing Drop with `alto drops stage stopwatch --file .build/drop-stopwatch.html --json`,

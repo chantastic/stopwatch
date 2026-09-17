@@ -1,5 +1,20 @@
 # M5Stack StopWatch conference badge
 
+The WorkOS team maintains firmware and the installer website together in
+[workos/stopwatch](https://github.com/workos/stopwatch). Request improvements in
+[Issues](https://github.com/workos/stopwatch/issues), propose changes with a pull
+request, and follow [Contributing](CONTRIBUTING.md) for checks and release review.
+
+| Area | Source | Publication |
+| --- | --- | --- |
+| Badge firmware | `firmware/factory_badge/` | Qualified, versioned firmware release |
+| Browser flashing logic | `web-flasher/` | Reviewed bundle copied into `site/public/stopwatch/install/` |
+| Guide and installer website | `site/` | [Manual Alto promotion](docs/site-promotion.md) |
+
+The [live installer](https://drops.workos.cloud/stopwatch) continues to serve the
+hardware-tested `conference-factory-3` release. Merging a pull request in this
+repository does not deploy the website or publish firmware automatically.
+
 An offline, locally configurable conference badge for the **M5Stack StopWatch**.
 The active firmware uses the factory **ESP-IDF + LVGL + Smooth UI Toolkit +
 Mooncake** stack, with the factory CO5300 display and CST820 touch integration.

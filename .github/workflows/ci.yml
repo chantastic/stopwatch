@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# This workflow builds and tests only. It has no publishing credentials or
+# deployment steps. Keep job names stable: main's protection requires them.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  browser:
+    name: Browser checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web-flasher
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run build
+      - name: Verify the website contains this installer
+        shell: bash
+        run: |
+          for file in index.html style.css installer.js THIRD_PARTY_NOTICES.txt; do
+            cmp "../.build/web-installer/$file" "../site/public/stopwatch/install/$file"
+          done
+
+  site:
+    name: Site checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: site
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Check manual promotion guards without network publication
+        run: python3 ../tests/test_promote_site.py
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+      # The build script uses Wrangler's --dry-run; it does not deploy.
+      # It downloads only the published release's size/hash-pinned components.
+      - run: npm run build
+      - run: npm run build:drop
+
+  firmware-host:
+    name: Firmware host checks
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      ARDUINOJSON_INCLUDE: ${{ github.workspace }}/.build/host-deps/ArduinoJson/src
+      FACTORY_TEST_JOBS: "3"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Fetch pinned host dependencies
+        shell: bash
+        run: |
+          mkdir -p .build/host-deps
+          git clone --quiet --depth 1 --branch v7.4.3 https://github.com/bblanchon/ArduinoJson.git .build/host-deps/ArduinoJson
+          test "$(git -C .build/host-deps/ArduinoJson rev-parse HEAD)" = 77771d3c07668e01d8f52acb03910c1110bb373f
+          python3 scripts/bootstrap-factory.py
+      # CommonCrypto and sips are intentionally tested on macOS. These are host
+      # adapters and simulated LVGL inputs, not physical sensor qualification.
+      - run: bash scripts/test.sh
+      - name: Check release packaging and preservation guards
+        run: python3 -m unittest discover -s tests -p 'test_package_web_release.py'
+
+  firmware-build:
+    name: Firmware build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      IDF_TOOLS_PATH: ${{ github.workspace }}/.build/idf-tools
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Install ESP-IDF system prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y git wget flex bison gperf cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
+      - name: Install the pinned SDK and framework sources
+        run: bash scripts/setup-factory.sh
+      - name: Compile native StopWatch firmware
+        run: bash scripts/build.sh
