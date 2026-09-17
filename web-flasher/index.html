@@ -21,11 +21,23 @@
         <h2 id="install-title">Install from your browser</h2>
         <p>Use <strong>Chrome or Edge on a computer</strong> and a USB-C cable that carries data. Close other apps connected to the badge.</p>
         <ol><li>Connect your M5Stack StopWatch.</li><li>Choose its USB port when prompted.</li><li>Keep it connected until the clock and storage checks finish.</li></ol>
-        <p class="note">This preview updates badges already prepared with our conference storage layout. Your saved profile and settings stay on the badge.</p>
+        <p class="note">Starting with a new StopWatch? First install saves a recovery copy, then replaces the factory software and storage. Updating a conference badge keeps your saved profile and settings.</p>
         <p id="unsupported" class="notice" hidden>USB installation needs desktop Chrome or Edge. Open this page directly in that browser. You can still read the guide and download the build here.</p>
         <noscript><p class="notice">Enable JavaScript in desktop Chrome or Edge to use the USB installer.</p></noscript>
+        <p id="save-unsupported" class="notice" hidden>First install needs local file saving. Use desktop Chrome or Edge with file access enabled so we can verify your recovery copy.</p>
         <label class="check"><input id="hardware" type="checkbox"> I’m connecting an M5Stack StopWatch.</label>
-        <div class="actions"><button id="install" disabled>Connect & install</button><button id="clock" class="secondary">Set clock & check badge</button></div>
+        <div class="install-options">
+          <div><h3>New StopWatch</h3><p>Back up the factory software, then make it a conference badge. Allow several minutes.</p><button id="prepare" disabled>First install</button></div>
+          <div><h3>Already a conference badge</h3><p>Install the current release while keeping your saved profile and settings.</p><button id="install" class="secondary" disabled>Update badge</button></div>
+        </div>
+        <section id="factory-actions" class="factory-stage" aria-labelledby="factory-title" hidden>
+          <h3 id="factory-title">Keep your recovery copy</h3>
+          <p id="backup-state"></p>
+          <button id="save-backup" class="secondary" disabled>Save recovery copy</button>
+          <label class="check"><input id="replace-confirm" type="checkbox" disabled> I’ve kept my recovery copy. Replace the factory software and all saved data on this badge.</label>
+          <div class="actions"><button id="factory-write" disabled>Install on this new badge</button><button id="factory-cancel" class="text-button">Cancel</button></div>
+        </section>
+        <div class="actions clock-action"><button id="clock" class="text-button">Set clock & check badge</button></div>
         <div id="activity" aria-busy="false" data-result="idle">
           <p id="status" role="status" aria-live="polite">Ready when you are. Installation stays between this browser and your badge.</p>
           <progress id="progress" value="0" max="100" aria-label="Installation progress"></progress>
@@ -46,15 +58,21 @@
         <p class="small">Reports open in GitHub for you to review and submit. Copied details contain build and readiness information, without your profile, photos, or Wi-Fi credentials.</p>
         <pre id="details" hidden></pre>
       </section>
-      <section aria-labelledby="first-install"><div class="eyebrow">STARTING FROM STOCK?</div><h2 id="first-install">First install</h2>
-        <p>M5Stack’s factory firmware uses a different storage layout. This installer stops before writing to those devices. Factory conversion is still being qualified.</p>
-        <p>Keep the original firmware for now, or <a href="https://github.com/chantastic/m5stack-stopwatch-authkit/issues/new?title=%5BFirst%20install%5D%20Factory%20StopWatch" target="_blank" rel="noopener">let us know you’d like to test a factory install</a>.</p>
-        <p class="small">If the browser cannot connect, check the cable, close serial monitors, and reconnect USB. A clock-check failure does not mean a verified firmware write was undone.</p>
+      <section aria-labelledby="first-install"><div class="eyebrow">USB HELP</div><h2 id="first-install">A fresh start, right here.</h2>
+        <p>You don’t need Arduino. If the browser cannot connect, keep USB plugged in, hold the power button for about two seconds until the green light comes on, then release it and try again.</p>
+        <p class="small">Use a data cable and close serial monitors. Only the verified M5Stack factory storage layout is supported. Your recovery copy stays on your computer; don’t attach it to issue reports.</p>
+        <details class="recovery"><summary>Finish an interrupted first install</summary>
+          <p>Keep your recovery copy. Try <strong>Set clock & check badge</strong> first. If the firmware write was interrupted, use <strong>Update badge</strong> to finish it.</p>
+          <p>If the conference firmware is installed but storage still needs preparation, this step checks the badge and prepares storage only when it cannot be opened. Working storage is kept.</p>
+          <label class="check"><input id="finish-confirm" type="checkbox"> I’m finishing a first install. If the badge’s profile storage cannot be opened, it may be erased and recreated.</label>
+          <button id="finish-install" class="secondary" disabled>Finish first install</button>
+          <p class="small">If the layout is unrecognized, stop and report it. Don’t discard your recovery copy.</p>
+        </details>
       </section>
     </div>
 
     <section class="release-notes"><h2>In this preview</h2><p>Six pages: looping init() animation, the published daily schedule, Developers After Dark placeholder, a configurable social badge, Hack your Badge, and Settings.</p>
-      <p class="small">Known limits: event artwork is provisional; horizontal page swipes need work—use the pushers or on-screen arrows. Phone portal discovery can need opening <code>http://192.168.4.1</code> manually. Battery runtime and factory conversion are not yet qualified. The schedule repeats daily using the badge’s local time.</p>
+      <p class="small">Known limits: event artwork is provisional; horizontal page swipes need work—use the pushers or on-screen arrows. Phone portal discovery can need opening <code>http://192.168.4.1</code> manually. Battery runtime is not yet qualified. Browser first install is experimental and still needs a complete test on factory hardware. The schedule repeats daily using the badge’s local time.</p>
       <div class="downloads"><span>Release files</span><a href="/stopwatch/install/releases/conference-factory-3/release.json" download>Manifest & checksums</a><a href="/stopwatch/install/releases/conference-factory-3/firmware.bin" download>Firmware</a><a href="https://github.com/chantastic/m5stack-stopwatch-authkit/releases/tag/conference-factory-3" target="_blank" rel="noopener">All components & notes ↗</a></div>
     </section>
   </main>

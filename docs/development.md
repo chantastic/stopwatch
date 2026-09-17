@@ -54,6 +54,12 @@ saved user state. Do not erase flash, change the partition scheme, write securit
 eFuses, or use a full-device image as a routine update. A missing serial port is
 not a firmware failure; check the connection and enumerate again before recovery.
 
+The browser has a separate [first-install flow](browser-factory-install.md) for
+the recognized factory layout. It requires a verified local full-flash backup and
+explicit replacement confirmation; ordinary updates remain preservation-only.
+Browser installation does not require Arduino. Its factory conversion still needs
+physical hardware qualification, distinct from the existing update verification.
+
 ## Verification proportional to the change
 
 The host suite covers account paging, all prior saved-style combinations, button

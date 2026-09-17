@@ -100,7 +100,7 @@ export class ClockConnection {
     }
     throw new Error("The badge did not reply in time. Close other USB tools and retry.");
   }
-  async provision(build) {
+  async provision(build, { initializeStorage = false } = {}) {
     let ack, offset;
     const deadline = performance.now() + 30000;
     while (performance.now() < deadline) {
@@ -117,7 +117,28 @@ export class ClockConnection {
     const status = await this.request("clock_status", "CLOCK_STATUS");
     validateClock(status, Math.floor(Date.now() / 1000), offset);
     if (status.rtc_epoch <= ack.rtc_epoch) throw new Error("The hardware clock is not advancing.");
-    const ready = await this.request("status", "CONFERENCE_STATUS");
+    let ready = await this.request("status", "CONFERENCE_STATUS");
+    // First install supplies this opt-in only after the user confirms erasure
+    // and the installer verifies the target partition map. Clock-only recovery
+    // and ordinary updates must never turn a mount failure into a format.
+    validateReadiness(ready, build, false);
+    if (ready.store_ready === false && initializeStorage === true) {
+      let initialized;
+      try {
+        initialized = await this.request("initialize_conference_storage", "STORAGE_ACK",
+          { confirm: "ERASE_FFAT_FOR_CONFERENCE" }, 60000);
+      } catch {
+        // The command may have completed even when its acknowledgment was lost.
+        // Never retry the destructive command automatically.
+        throw new Error("Storage preparation could not be verified. Reconnect the badge and retry clock setup to check its current state before attempting another first install.");
+      }
+      // Released conference-factory-3 emits only ok/store_ready/nonce here;
+      // unlike CLOCK_ACK, STORAGE_ACK has no mandatory protocol field.
+      if ((Object.hasOwn(initialized, "protocol") && initialized.protocol !== 1) ||
+          initialized.ok !== true || initialized.store_ready !== true)
+        throw new Error("Storage preparation was not confirmed. Reconnect the badge and retry clock setup to check its current state before attempting another first install.");
+      ready = await this.request("status", "CONFERENCE_STATUS");
+    }
     validateReadiness(ready, build);
     return ready;
   }

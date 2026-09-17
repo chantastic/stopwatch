@@ -35,18 +35,28 @@ async function connection(t, onWrite) {
   await conn.open(); t.after(() => conn.close()); return { port, conn };
 }
 
-function fakeTime(t) {
+function fakeTime(t, maximum = 40000) {
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW * 1000 });
   t.mock.method(performance, "now", () => Date.now() - NOW * 1000);
   return async promise => {
     let done = false;
     // Attach both handlers immediately so simulated rejections stay handled.
     promise.then(() => { done = true; }, () => { done = true; });
-    for (let elapsed = 0; !done && elapsed <= 40000; elapsed += 25) {
+    for (let elapsed = 0; !done && elapsed <= maximum; elapsed += 25) {
       await immediate(); t.mock.timers.tick(25);
     }
-    assert.ok(done, "bounded protocol operation settled within simulated 40 seconds");
+    assert.ok(done, `bounded protocol operation settled within simulated ${maximum / 1000} seconds`);
     return promise;
+  };
+}
+
+function provisioningReplies(status = ready, initialize = () => {}) {
+  let offset;
+  return (request, port) => {
+    if (request.op === "clock_set") { offset = request.offset_minutes; port.reply("CLOCK_ACK", request, clock(request.epoch, offset)); }
+    if (request.op === "clock_status") port.reply("CLOCK_STATUS", request, { ...clock(Math.floor(Date.now() / 1000), offset), source: "rtc" });
+    if (request.op === "status") port.reply("CONFERENCE_STATUS", request, status());
+    if (request.op === "initialize_conference_storage") initialize(request, port);
   };
 }
 
@@ -181,6 +191,124 @@ test("provision verifies a fresh clock, advancing RTC, and readiness in order", 
   assert.equal(new Set(port.writes.map(request => request.nonce)).size, 3);
   // JSON serializes negative zero as zero on UTC machines.
   assert.equal(port.writes[0].offset_minutes, -new Date().getTimezoneOffset() || 0);
+});
+
+test("first install accepts the released firmware's exact unversioned storage acknowledgment, then verifies fresh status", async t => {
+  const drive = fakeTime(t);
+  let mounted = false;
+  const { port, conn } = await connection(t, provisioningReplies(
+    () => ({ ...ready(), store_ready: mounted }),
+    // firmware/factory_badge/main/main.cpp emits these fields plus the nonce;
+    // its reply() helper does not add a protocol version.
+    (request, port) => { mounted = true; port.reply("STORAGE_ACK", request, { ok: true, store_ready: true }); },
+  ));
+  assert.deepEqual(await drive(conn.provision(BUILD, { initializeStorage: true })), { ...ready(), nonce: port.writes[4].nonce });
+  assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status", "initialize_conference_storage", "status"]);
+  assert.deepEqual(port.writes[3], { op: "initialize_conference_storage", confirm: "ERASE_FFAT_FOR_CONFERENCE", nonce: port.writes[3].nonce });
+  assert.ok(port.writes.every(request => /^[a-f0-9]{24}$/.test(request.nonce)));
+  assert.equal(new Set(port.writes.map(request => request.nonce)).size, 5);
+});
+
+test("clock-only and update provisioning never format; initialization requires literal true", async t => {
+  for (const options of [undefined, {}, { initializeStorage: false }, { initializeStorage: 1 }, { initializeStorage: "true" }, { initializeStorage: null }]) {
+    await t.test(JSON.stringify(options) || "default", async t => {
+      const drive = fakeTime(t);
+      const { port, conn } = await connection(t, provisioningReplies(() => ({ ...ready(), store_ready: false })));
+      await assert.rejects(drive(conn.provision(BUILD, options)), /storage needs preparation/);
+      assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status"]);
+    });
+  }
+});
+
+test("explicit first install preserves an already mounted profile store", async t => {
+  const drive = fakeTime(t);
+  const { port, conn } = await connection(t, provisioningReplies());
+  await drive(conn.provision(BUILD, { initializeStorage: true }));
+  assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status"]);
+});
+
+test("first install checks build, hardware, clock, and offline state before any format", async t => {
+  for (const invalid of [
+    { build: "old-build" }, { board: 29 }, { flash_bytes: 8388608 }, { psram_bytes: 0 },
+    { store_ready: "false" }, { clock_valid: false }, { rtc: false },
+    { setup: true }, { wifi_mode: 1 }, { bluetooth: 1 },
+  ]) {
+    await t.test(JSON.stringify(invalid), async t => {
+      const drive = fakeTime(t);
+      const { port, conn } = await connection(t, provisioningReplies(() => ({ ...ready(), store_ready: false, ...invalid })));
+      await assert.rejects(drive(conn.provision(BUILD, { initializeStorage: true })));
+      assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status"]);
+    });
+  }
+});
+
+test("storage preparation rejects failed acknowledgment fields and any conflicting explicit protocol version without retry", async t => {
+  for (const ack of [
+    {}, { ok: false, store_ready: false },
+    { ok: 1, store_ready: true }, { ok: true, store_ready: "true" },
+    { ok: true },
+    ...[0, 2, "1", null, true].map(protocol => ({ protocol, ok: true, store_ready: true })),
+  ]) {
+    await t.test(JSON.stringify(ack), async t => {
+      const drive = fakeTime(t);
+      const { port, conn } = await connection(t, provisioningReplies(
+        () => ({ ...ready(), store_ready: false }),
+        (request, port) => port.reply("STORAGE_ACK", request, ack),
+      ));
+      await assert.rejects(drive(conn.provision(BUILD, { initializeStorage: true })), /Storage preparation was not confirmed/);
+      assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status", "initialize_conference_storage"]);
+    });
+  }
+});
+
+test("storage formatting can take longer than an ordinary request and still requires a fresh matching nonce", async t => {
+  const drive = fakeTime(t, 70000);
+  let mounted = false;
+  const { port, conn } = await connection(t, provisioningReplies(
+    () => ({ ...ready(), store_ready: mounted }),
+    (request, port) => {
+      port.reply("STORAGE_ACK", { nonce: "old-request" }, { ok: true, store_ready: true });
+      setTimeout(() => { mounted = true; port.reply("STORAGE_ACK", request, { ok: true, store_ready: true }); }, 45000);
+    },
+  ));
+  await drive(conn.provision(BUILD, { initializeStorage: true }));
+  assert.ok(Date.now() >= (NOW + 45) * 1000);
+  assert.equal(port.writes.filter(request => request.op === "initialize_conference_storage").length, 1);
+});
+
+test("missing storage acknowledgment times out without retry and clock-only recovery only checks current state", async t => {
+  const drive = fakeTime(t, 70000);
+  let mounted = false;
+  const { port, conn } = await connection(t, provisioningReplies(
+    () => ({ ...ready(), store_ready: mounted }),
+    (request, port) => {
+      // Device completed the operation, but the matching acknowledgment was lost.
+      mounted = true;
+      port.push('STORAGE_ACK {bad}\n');
+      port.reply("STORAGE_ACK", { nonce: "stale" }, { ok: true, store_ready: true });
+    },
+  ));
+  await assert.rejects(drive(conn.provision(BUILD, { initializeStorage: true })), /Reconnect the badge and retry clock setup/);
+  assert.ok(Date.now() >= (NOW + 60) * 1000);
+  assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status", "initialize_conference_storage"]);
+  await drive(conn.provision(BUILD));
+  assert.deepEqual(port.writes.slice(4).map(request => request.op), ["clock_set", "clock_status", "status"]);
+  assert.equal(port.writes.filter(request => request.op === "initialize_conference_storage").length, 1);
+});
+
+test("a positive storage acknowledgment alone cannot mark a unit ready", async t => {
+  for (const after of [{ store_ready: false }, { build: "wrong-build" }, { rtc: false }, { wifi_mode: 1 }]) {
+    await t.test(JSON.stringify(after), async t => {
+      const drive = fakeTime(t);
+      let initialized = false;
+      const { port, conn } = await connection(t, provisioningReplies(
+        () => ({ ...ready(), ...(initialized ? after : { store_ready: false }) }),
+        (request, port) => { initialized = true; port.reply("STORAGE_ACK", request, { ok: true, store_ready: true }); },
+      ));
+      await assert.rejects(drive(conn.provision(BUILD, { initializeStorage: true })));
+      assert.deepEqual(port.writes.map(request => request.op), ["clock_set", "clock_status", "status", "initialize_conference_storage", "status"]);
+    });
+  }
 });
 
 test("startup retries refresh browser time and nonce instead of replaying old clock data", async t => {

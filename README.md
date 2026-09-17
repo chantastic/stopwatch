@@ -27,8 +27,9 @@ Invite and animation artwork remain temporary.
 The Hack QR opens [drop.workos.cloud/stopwatch](https://drop.workos.cloud/stopwatch).
 
 Browser release packaging and publication are documented in
-[web releases](docs/web-releases.md). The alpha installer preserves compatible
-conference badges; factory-layout conversion is not yet qualified.
+[web releases](docs/web-releases.md). Updates preserve compatible conference
+badges. The separate [browser first-install flow](docs/browser-factory-install.md)
+backs up factory devices before conversion; physical qualification is pending.
 
 Use the physical left/right pushers or on-screen arrows to page. Swipe vertically
 to scroll Schedule or switch between GitHub, X/Twitter and LinkedIn within Badge.
