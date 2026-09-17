@@ -73,14 +73,19 @@ attest to all bytes in an existing binary. The initial application hash is
 Publish the four verified files as GitHub Release assets: `release.json`,
 `bootloader.bin`, `partition-table.bin`, and `firmware.bin`. Do not overwrite an
 existing released tag's assets. Update the site's exact size/SHA-256 allowlist
-when adding a release. Its same-origin download route verifies the upstream
-asset before serving it and forwards no browser credentials to GitHub.
+when adding a release. The site build downloads and verifies each pinned asset,
+then packages those bytes as ignored generated Worker content. The same-origin
+download routes need no runtime GitHub request or browser credentials. Binaries
+and generated content remain outside Git.
 
 Copy `.build/web-installer/` into the site's `public/stopwatch/install/`, run the
 site's checks, and publish through managed Alto Git/build/release. Do not use a
 direct Cloudflare deployment for that application. Stage and publish the updated
 Drop separately, preserving its audience. Verify the anonymous installer and all
-four deployed asset hashes after publication.
+four deployed asset hashes after publication. Alto's managed Worker egress policy
+can reject runtime GitHub fetches; the first proxy deployment returned 502 even
+though Node and local workerd checks passed. Keep release acquisition in the
+build rather than widening the organization's outbound policy.
 
 ## Pinned browser library adaptations
 

@@ -42,6 +42,42 @@ The legacy bootstrap fixture hash is
 It contains boot metadata only. Private readback and test logs remain under
 `.build/web-release/`, outside Git and published release assets.
 
+## Published release
+
+The public GitHub prerelease is
+<https://github.com/chantastic/m5stack-stopwatch-authkit/releases/tag/conference-factory-3>,
+tagged from source commit `598113b`. It contains exactly the manifest, bootloader,
+partition table and application; no device readback, NVS or filesystem image.
+GitHub reported the expected byte sizes and SHA-256 digests for all four assets.
+
+The first Alto deployment served the installer but its runtime GitHub proxy
+returned 502 for all four files. Node and local workerd downloads passed. The
+installed Alto SDK documents that managed outbound requests pass through an
+organization/platform host allowlist. Release acquisition was therefore moved
+to build-time hash verification and ignored generated site content, keeping the
+existing outbound policy intact.
+
+StopWatch Alto release 8 (`01M2RHPV071C9QDM8AEE9AX7C3`), source
+`4ab7b1d0908bdf2359f083d1520d9f6e9125a9f5`, then passed anonymous production checks:
+the guide, installer and static assets returned 200, and all four release files
+matched their approved sizes and SHA-256 digests. Versioned release files have
+immutable caching. The live installer rendered correctly with no browser console
+warnings or errors; its bundle is unchanged from the physical browser test.
+
+Drops Alto release 1 (`01M2RHSX06NZJ86Y23ZSMN20GP`), source
+`882f82826f378cac3617634c3b86500d9081082d`, serves the requested entry
+<https://drops.workos.cloud/stopwatch>. Anonymous requests redirect to the live
+installer with 302, then 200. A browser navigation through that exact entry
+rendered the install, release-download and issue-reporting controls with no
+console warnings or errors. The trailing-slash alias also works; query parameters
+are discarded and unknown subpaths return 404.
+
+The existing singular guide, <https://drop.workos.cloud/stopwatch>, was updated
+to live version 2 with the standalone installer link. Its organization audience
+and editors-only editing policy are unchanged. The full generated guide bundle
+hash matched Alto's staged hash; the platform's truncated source readback was
+not used as the publishing source.
+
 ## Limits
 
 This verifies one physical StopWatch in Chrome on macOS. It does not qualify
@@ -50,5 +86,6 @@ battery runtime, or power interruption mid-flash. Factory layouts remain
 blocked before writes; no chip erase or filesystem initialization was tested.
 The existing profile was not replaced with synthetic personal data for testing.
 
-Alto publication and anonymous asset delivery require separate checks after
-deployment; local browser success alone is not evidence of a live website.
+The physical integration test used local serving; production publication was
+checked separately by UI inspection and exact asset hashes, without a redundant
+second flash of the same application.
