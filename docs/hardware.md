@@ -149,6 +149,29 @@ rotation stable while the device hangs or is handled:
 All four cardinal orientations are supported. Rotation redraws local cached
 data and does not trigger a profile request or save rotation to flash.
 
+## Physical touch alignment finding — September 17, 2026
+
+On conference commit `f17048f`, a 60-second live USB observation used the real
+touch sensor in Default/rotation 0. The user confirmed aiming directly at the
+bottom crosshair `(234, 362)`: 12 captured release positions had Y=390–410,
+median 401, a median downward error of 39 pixels. Side-region release positions
+had median X=92 near the left target X=112, and X=386 near the right target
+X=356. Those side targets were inferred from regions, not individually labeled
+by the sampling tool; the user also reported the other axis feeling displaced.
+This supports investigating both axes. No correction has yet been applied.
+Private samples: `.build/touch-test-verification/live-20260917-090738.jsonl`.
+
+Pinned M5GFX 0.2.26 source explains the observed raw-to-screen factor 239/233:
+`Panel_AMOLED_Framebuffer` calls `setTouch()` while panel geometry still has the
+240×240 defaults, before `initPanelFb()` copies the 468×468 configuration.
+StopWatch's touch configuration declares maxima 233, but live raw coordinates
+exceeded that value. Merely recalculating with the larger panel size would
+roughly double coordinates and is not an established fix. Collect deliberately
+labeled targets across the screen and validate both fixed orientations before
+choosing or persisting a calibration. The source issue alone does not explain
+the full measured offset, and injected display-coordinate tests cannot qualify
+physical alignment.
+
 ## Build target, USB, and flash layout
 
 [`scripts/build.sh`](../scripts/build.sh) fixes the working target:
