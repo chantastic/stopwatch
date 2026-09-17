@@ -336,8 +336,8 @@ physical captures from the preceding scale-only observations.
 Host checks exercise the offset changes over and outside the screen, unchanged
 scales, monotonicity, no clamping, and rotation covariance after restoring the
 screen term. These verify the mathematical implementation, not physical
-alignment. Fresh center and edge checks remain required; no batch-wide validity
-is inferred from this one board/user fit.
+alignment. The physical follow-up below covers the center; edges remain
+unchecked. No batch-wide validity is inferred from this one board/user fit.
 
 The September 17 candidate passed the complete host suite, pinned firmware
 build, and independent math/source review. The 1,307,375-byte application has
@@ -346,8 +346,58 @@ The ordinary uploader verified the existing partition layout and programmed
 data, then freshly provisioned/verified the RTC and returned `UNIT_READY` with
 `storage_initialized: false`. Live diagnostics confirmed `scale-offset-2`,
 mounted storage, valid time, both radios off, and a freshly opened 180° test.
-The physical repeat is pending; upload and synthetic modal entry do not qualify
-alignment. Private logs: `.build/touch-offset-{tests,build,flash}.log`.
+At installation, the physical repeat was pending; upload and synthetic modal
+entry do not qualify alignment. Private logs: `.build/touch-offset-{tests,build,flash}.log`.
+
+### Physical center follow-up with the combined correction
+
+Firmware `dec9905` / `scale-offset-2` was tested with the same five-pose center
+sequence on September 17. The observer required the new model identifier in
+every reply. Coefficients were fixed throughout; these new observations were
+not used to refit them. Each pose has five complete sensor press/release pairs.
+All targets were explicitly the center `(234, 234)`.
+
+The new presses were shorter than prescribed: 21 of the 25 comparison contacts
+were below the observer's 0.45-second threshold. Baseline duration range/median
+was 0.454–0.881 / 0.654 seconds; follow-up was 0.187–0.687 / 0.334 seconds.
+Every new pass therefore retains `clean: false` and its duration flags. These
+are descriptive physical results, not matched-duration validation. Each press
+had multiple captured sensor polls, and first/held/release positions usually
+agreed closely; the largest first-to-release movement was 5 pixels vertically.
+
+Median errors use the held position from each of the five contacts per pose;
+positive remains right/down. Distances summarize individual contacts, not the
+length of each pass's median error vector.
+
+| Pose | Median error before → after (X, Y) | Median distance before → after |
+| --- | --- | --- |
+| Initial 180° | (+5, +23) → (+3, +1) px | 24.70 → 4.12 px |
+| Default | (-3, +5) → (+4, -8) px | 8.60 → 8.94 px |
+| Loop left / rotation 3 | (+17, +19) → (+1, +6) px | 24.04 → 10.30 px |
+| Loop right / rotation 1 | (-7, +20) → (+4, +2) px | 22.09 → 7.81 px |
+| Repeated 180° | (+1, +25) → (0, +2) px | 26.57 → 8.00 px |
+
+Across the comparison sequence, median contact distance decreased from 22.47
+to 7.81 pixels. Default's distance is essentially unchanged, with a modest
+upward bias; the other poses improve. The repeated new 180° median changes by
+(-3, +1) pixels from its initial new pass. Retain the candidate without further
+fitting to this small sample. Timing differences, finger placement, untested
+edges and other boards remain limitations.
+
+The first new 180° attempt also had five short contacts and was repeated for
+timing. It is retained separately, not relabeled as clean: its median error is
+(+2, -5) pixels and median distance is 6.40 pixels, also improved versus the
+baseline. Substituting that first attempt into the comparison sequence gives
+8.00 pixels overall, so the conclusion does not depend on choosing the better
+retry. All outliers are retained. An earlier waiting window contained zero
+contacts and is excluded.
+
+Private evidence is under `.build/touch-test-verification/`: comparison files
+`center-offset2-*` at `102858`, `102932`, `103024`, `103116`, and `103225`;
+the first attempt is `102745`, and the empty window is `102254`. The firmware
+remained unchanged, the final pose was 180°, and observation closed afterward.
+All 25 contact summaries were independently reconstructed from their sensor
+polls; the comparison is `heldout-independent-final.json` in the same directory.
 
 ## Build target, USB, and flash layout
 
