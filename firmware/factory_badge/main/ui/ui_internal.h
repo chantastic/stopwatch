@@ -1,0 +1,49 @@
+#pragma once
+#include "../badge_ui.h"
+#include <memory>
+#include <utility>
+
+namespace badge::ui {
+
+constexpr int Width = 468;
+constexpr int Height = 466;
+constexpr int PageCount = 6;
+inline constexpr const char* PageNames[] = {"init()", "Schedule", "After Dark", "Badge", "Hack your Badge", "Settings"};
+inline constexpr const char* NetworkNames[] = {"GitHub", "X / Twitter", "LinkedIn"};
+inline constexpr const char* HackUrl = "https://drop.workos.cloud/stopwatch";
+
+struct Context {
+    UiModel model;
+    UiCallbacks callbacks;
+    int page = 0;
+    int setup_origin = 0;
+    bool setup = false;
+    bool touch_test = false;
+    bool rebuild = false;
+    uint8_t rotation = 2;
+    UiTouchSample touch;
+    std::string ssid, password, ip, setup_status;
+};
+
+class PageView {
+public:
+    PageView(Context& context, lv_obj_t* parent);
+    virtual ~PageView();
+    virtual void update() {}
+    PageView(const PageView&) = delete;
+    PageView& operator=(const PageView&) = delete;
+protected:
+    Context& context_;
+    lv_obj_t* root_;
+};
+
+std::unique_ptr<PageView> make_init(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_schedule(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_after_dark(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_badge(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_hack(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_settings(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_setup(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_touch_test(Context&, lv_obj_t*);
+
+} // namespace badge::ui

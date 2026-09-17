@@ -1,0 +1,330 @@
+#include "board.h"
+#include "badge_ui.h"
+#include "clock_service.h"
+#include "services.h"
+#include "conference_settings.h"
+#include "schedule.h"
+#include "orientation_filter.h"
+#include "button_gesture.h"
+#include <ArduinoJson.h>
+#include <nvs_flash.h>
+#include <nvs.h>
+#include <esp_flash.h>
+#include <esp_psram.h>
+#include <esp_wifi.h>
+#include <esp_system.h>
+#include <driver/usb_serial_jtag.h>
+#include <driver/usb_serial_jtag_vfs.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <algorithm>
+#include <array>
+
+namespace {
+constexpr char Build[] = "conference-factory-3";
+ConferenceSettings settings;
+OrientationFilter orientation;
+BadgeButtonGesture buttons;
+badge::UiModel model;
+badge::ProfileSnapshot profile;
+nvs_handle_t preferences;
+bool preferencesReady = false, rotationPending = false;
+bool setupRequested = false;
+uint32_t preferenceWrites = 0, networkSaveAt = 0, lastImu = 0, lastModel = 0;
+uint32_t loopCount = 0, inputCount = 0, maxLoopGap = 0, lastLoop = 0;
+std::string serialLine;
+bool serialOverflow = false;
+
+bool writeBytes(const void* bytes, size_t count, uint32_t timeoutMs = 1000) {
+    const auto* data = static_cast<const uint8_t*>(bytes);
+    uint32_t started = board::millis();
+    while (count && uint32_t(board::millis() - started) < timeoutMs) {
+        int sent = usb_serial_jtag_write_bytes(data, count, pdMS_TO_TICKS(20));
+        if (sent > 0) { data += sent; count -= sent; }
+    }
+    return count == 0;
+}
+void line(const char* text) { writeBytes(text, strlen(text)); writeBytes("\n", 1); }
+void reply(const char* prefix, const JsonDocument& json) {
+    std::string body;
+    serializeJson(json, body);
+    writeBytes(prefix, strlen(prefix)); writeBytes(body.data(), body.size()); writeBytes("\n", 1);
+}
+void startSetup(const char* password = nullptr) {
+    if (setupRequested || badge::ui_touch_test_active()) return;
+    if (badge::portal_start(password)) {
+        setupRequested = true;
+        badge::ui_show_setup("", "", "192.168.4.1", "Starting setup...");
+    }
+}
+void closeSetup() { badge::portal_stop(); }
+void applyButton(BadgeButtonAction action) {
+    if (action == BadgeButtonAction::NONE) return;
+    ++inputCount;
+    bool both = action == BadgeButtonAction::SETTINGS;
+    int delta = action == BadgeButtonAction::BLUE ? 1 : -1;
+    if (board::rotation() == 2) delta = -delta;
+    badge::ui_button(both, delta);
+}
+void refreshModel() {
+    auto previousAvatar = profile.avatar; // Keep previous image alive through widget update.
+    profile = badge::profile_snapshot();
+    model.name = profile.profile.name;
+    for (size_t i = 0; i < 3; ++i) model.socials[i] = profile.profile.urls[i];
+    model.avatar = profile.avatar && !profile.avatar->empty() ? profile.avatar->data() : nullptr;
+    model.avatar_width = model.avatar_height = model.avatar ? 160 : 0;
+    model.profile_revision = profile.revision;
+    auto power = board::battery();
+    model.battery_percent = power.valid ? power.percent : -1;
+    model.brightness_percent = settings.brightness;
+    model.orientation = static_cast<badge::Orientation>(settings.orientation);
+    model.settings_pending = settings.pending();
+    model.clock_text = badge_clock::timeText();
+    model.date_text = badge_clock::dateText();
+    model.clock_valid = badge_clock::valid();
+    model.schedule_minute = badge_schedule::localMinute(
+        badge_clock::epoch(), badge_clock::offset(), model.clock_valid);
+    model.schedule_current = badge_schedule::current(model.schedule_minute);
+    badge::ui_update(model);
+}
+void status(const char* nonce) {
+    auto saved = badge::profile_snapshot();
+    auto portal = badge::portal_snapshot();
+    uint32_t flashSize = 0;
+    esp_flash_get_size(nullptr, &flashSize);
+    wifi_mode_t wifi = WIFI_MODE_NULL;
+    esp_wifi_get_mode(&wifi);
+    int mask = 0;
+    for (int i = 0; i < 3; ++i) if (!saved.profile.urls[i].empty()) mask |= 1 << i;
+    JsonDocument data;
+    data["build"] = Build; data["framework"] = "ESP-IDF/LVGL/Smooth/Mooncake";
+    data["page_count"] = 6; data["page"] = badge::ui_page_index();
+    data["brightness_percent"] = settings.brightness;
+    data["orientation_mode"] = settings.orientationName();
+    data["rotation"] = board::rotation(); data["preferences_pending"] = settings.pending();
+    data["preference_writes"] = preferenceWrites; data["network"] = model.selected_network;
+    data["configured_mask"] = mask; data["avatar"] = bool(saved.avatar);
+    data["name_present"] = !saved.profile.name.empty(); data["store_ready"] = saved.ready;
+    data["setup"] = setupRequested || portal.active || portal.starting;
+    data["wifi_mode"] = int(wifi); data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
+    data["clock_valid"] = badge_clock::valid(); data["rtc"] = board::rtcAvailable();
+    data["flash_bytes"] = flashSize; data["psram_bytes"] = esp_psram_get_size();
+    data["board"] = 30; data["display_width"] = board::width(); data["display_height"] = board::height();
+    data["schedule_current"] = model.schedule_current;
+    data["schedule_minute"] = model.schedule_minute;
+    data["ui_ticks"] = loopCount; data["inputs"] = inputCount; data["max_loop_gap_ms"] = maxLoopGap;
+    if (badge_clock::validNonce(nonce)) data["nonce"] = nonce;
+    reply("CONFERENCE_STATUS ", data);
+}
+void touchStatus(const char* nonce) {
+    auto touch = badge::ui_touch_state();
+    JsonDocument data;
+    data["active"] = badge::ui_touch_test_active(); data["pressed"] = touch.pressed;
+    data["sample"] = touch.sample; data["sensor"] = touch.sensor;
+    data["x"] = touch.x; data["y"] = touch.y;
+    data["raw_x"] = touch.raw_x; data["raw_y"] = touch.raw_y;
+    data["rotation"] = board::rotation(); data["scale_trial"] = false;
+    data["touch_model"] = "factory-native";
+    if (badge_clock::validNonce(nonce)) data["nonce"] = nonce;
+    reply("TOUCH_TEST_STATUS ", data);
+}
+void clockCommand(JsonDocument& command) {
+    const char* op = command["op"] | "";
+    const char* nonce = command["nonce"] | "";
+    std::string error;
+    if (!badge_clock::validNonce(nonce)) error = "invalid_nonce";
+    else if (strcmp(op, "clock_set") == 0) {
+        if (!command["epoch"].is<int64_t>() || !command["offset_minutes"].is<int>()) error = "invalid_value";
+        else badge_clock::set(command["epoch"].as<int64_t>(), command["offset_minutes"].as<int>(), "computer", error);
+    }
+    int64_t rtc = 0;
+    bool validRtc = board::readRtcUtc(rtc);
+    bool valid = badge_clock::valid() && validRtc;
+    if (valid && llabs(badge_clock::epoch() - rtc) > 1) { valid = false; error = "clock_verify_failed"; }
+    if (error.empty() && !valid) error = "clock_unset";
+    JsonDocument data;
+    data["protocol"] = 1; data["ok"] = error.empty() && valid; data["valid"] = valid;
+    data["source"] = badge_clock::source(); data["epoch"] = badge_clock::epoch();
+    data["rtc_epoch"] = validRtc ? rtc : 0; data["offset_minutes"] = badge_clock::offset();
+    if (!error.empty()) data["error"] = error;
+    if (badge_clock::validNonce(nonce)) data["nonce"] = nonce;
+    reply(strcmp(op, "clock_set") == 0 ? "CLOCK_ACK " : "CLOCK_STATUS ", data);
+}
+void capture() {
+    if (setupRequested || badge::ui_setup_active()) { line("CAPTURE_REJECTED"); return; }
+    refreshModel(); badge::ui_tick(board::millis());
+    lv_refr_now(board::display());
+    char header[64]; snprintf(header, sizeof(header), "BADGE_CAPTURE %d %d", board::width(), board::height());
+    line(header);
+    std::array<uint8_t, 468 * 3> row;
+    uint32_t start = board::millis();
+    for (int y = 0; y < board::height(); ++y) {
+        size_t bytes = size_t(board::width()) * 3;
+        if (board::millis() - start > 5000 || !board::readFrameRow(y, row.data(), bytes) || !writeBytes(row.data(), bytes, 200)) {
+            line("\nBADGE_CAPTURE_ABORTED"); return;
+        }
+    }
+    line("\nBADGE_CAPTURE_END");
+}
+void command(JsonDocument& data) {
+    const char* op = data["op"] | "";
+    const char* nonce = data["nonce"] | "";
+    if (!strcmp(op, "clock_set") || !strcmp(op, "clock_status")) clockCommand(data);
+    else if (!strcmp(op, "status")) { if (data["reset_metrics"] | false) maxLoopGap = 0; status(nonce); }
+    else if (!strcmp(op, "touch_test_status")) touchStatus(nonce);
+    else if (!strcmp(op, "page") && data["step"].is<int>() && abs(data["step"].as<int>()) == 1) {
+        badge::ui_page(data["step"].as<int>()); status(nonce);
+    } else if (!strcmp(op, "button")) {
+        const char* value = data["value"] | "";
+        if (!strcmp(value, "blue")) applyButton(BadgeButtonAction::BLUE);
+        else if (!strcmp(value, "yellow")) applyButton(BadgeButtonAction::YELLOW);
+        else if (!strcmp(value, "both")) applyButton(BadgeButtonAction::SETTINGS);
+        else { line("COMMAND_REJECTED"); return; }
+        status(nonce);
+    } else if (!strcmp(op, "touch")) {
+        const char* phase = data["phase"] | "";
+        int x = data["x"] | -1, y = data["y"] | -1;
+        if (x < 0 || y < 0 || x >= board::width() || y >= board::height() ||
+            (strcmp(phase, "begin") && strcmp(phase, "move") && strcmp(phase, "end"))) { line("COMMAND_REJECTED"); return; }
+        bool simulatedContact = strcmp(phase, "end") != 0;
+        if (!board::injectTouch(x, y, simulatedContact)) { line("COMMAND_REJECTED"); return; }
+        lv_indev_read(board::pointer());
+        if (badge::ui_touch_test_active()) badge::ui_touch_sample(x, y, x, y, simulatedContact, board::rotation(), false);
+        status(nonce);
+    } else if (!strcmp(op, "setup_test")) {
+        const char* password = data["password"] | "";
+        size_t size = strlen(password);
+        bool accepted = size >= 12 && size <= 32;
+        for (size_t i = 0; i < size; ++i) if (!isalnum(static_cast<unsigned char>(password[i]))) accepted = false;
+        if (!accepted || setupRequested || badge::ui_touch_test_active()) { line("COMMAND_REJECTED"); return; }
+        startSetup(password);
+        line("CONFERENCE_SETUP {\"starting\":true}");
+    } else if (!strcmp(op, "portal_status")) {
+        auto portal = badge::portal_snapshot(); JsonDocument result;
+        result["active"] = portal.active; result["starting"] = portal.starting;
+        result["clients"] = portal.clients; result["outcome"] = int(portal.outcome);
+        if (!portal.error.empty()) result["error"] = portal.error;
+        reply("PORTAL_STATUS ", result);
+    } else if (!strcmp(op, "initialize_conference_storage")) {
+        bool confirmed = !strcmp(data["confirm"] | "", "ERASE_FFAT_FOR_CONFERENCE");
+        bool success = confirmed && badge_clock::validNonce(nonce) && !setupRequested && badge::profile_initialize_for_conference();
+        JsonDocument result; result["ok"] = success; result["store_ready"] = badge::profile_snapshot().ready;
+        if (badge_clock::validNonce(nonce)) result["nonce"] = nonce;
+        reply("STORAGE_ACK ", result);
+    } else if (!strcmp(op, "clear_manual_profile") && data["confirm"].is<bool>() && data["confirm"].as<bool>()) {
+        if (setupRequested) { line("COMMAND_REJECTED"); return; }
+        JsonDocument result; result["success"] = badge::profile_clear(); reply("CONFERENCE_CLEAR ", result);
+    } else if (!strcmp(op, "capture_badge") || !strcmp(op, "capture")) capture();
+    else if (!strcmp(op, "reboot")) { line("CONFERENCE_REBOOT"); vTaskDelay(pdMS_TO_TICKS(50)); esp_restart(); }
+    else line("COMMAND_REJECTED");
+}
+void pollCommands() {
+    uint8_t bytes[256];
+    int count = usb_serial_jtag_read_bytes(bytes, sizeof(bytes), 0);
+    for (int i = 0; i < count; ++i) {
+        char c = bytes[i];
+        if (c == '\r') continue;
+        if (c != '\n') {
+            if (!serialOverflow && serialLine.size() < 1024) serialLine += c;
+            else serialOverflow = true;
+            continue;
+        }
+        JsonDocument data;
+        if (serialOverflow || deserializeJson(data, serialLine)) line("COMMAND_REJECTED");
+        else command(data);
+        serialLine.clear(); serialOverflow = false;
+    }
+}
+void persist(uint32_t now) {
+    if (settings.saveDue(now)) {
+        if (preferencesReady && nvs_set_u32(preferences, "prefs", settings.encoded()) == ESP_OK && nvs_commit(preferences) == ESP_OK) {
+            ++preferenceWrites; settings.saved();
+        } else settings.saveFailed(now);
+    }
+    if (networkSaveAt && int32_t(now - networkSaveAt) >= 0) {
+        bool saved = preferencesReady && nvs_set_u8(preferences, "network", model.selected_network) == ESP_OK && nvs_commit(preferences) == ESP_OK;
+        networkSaveAt = saved ? 0 : now + 5000;
+    }
+}
+void pollOrientation(uint32_t now) {
+    if (badge::ui_touch_test_active()) return;
+    bool touching = board::touch().pressed;
+    if (rotationPending && !touching) {
+        uint8_t next = settings.automatic() ? board::rotation() : settings.fixedRotation();
+        if (board::setRotation(next)) {
+            orientation.reset(next); rotationPending = false; badge::ui_rotation_changed();
+        }
+    }
+    if (!settings.automatic() || rotationPending) return;
+    auto imu = board::acceleration();
+    if (imu.sampledAtMs == lastImu) return;
+    lastImu = imu.sampledAtMs;
+    if (!imu.valid) { orientation.invalidate(); return; }
+    if (orientation.update(imu.y, imu.x, imu.z, now, touching) && board::setRotation(orientation.rotation()))
+        badge::ui_rotation_changed();
+}
+}
+
+extern "C" void app_main() {
+    usb_serial_jtag_driver_config_t usb = {.tx_buffer_size = 8192, .rx_buffer_size = 2048};
+    ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb));
+    usb_serial_jtag_vfs_use_driver();
+    // Never erase an attendee's NVS on initialization errors.
+    esp_err_t nvs = nvs_flash_init();
+    if (nvs != ESP_OK || !board::init()) { line("CONFERENCE_BOOT_FAILED"); return; }
+    preferencesReady = nvs_open("conference_ui", NVS_READWRITE, &preferences) == ESP_OK;
+    uint32_t value = 0; uint8_t network = 0;
+    if (preferencesReady) { nvs_get_u32(preferences, "prefs", &value); nvs_get_u8(preferences, "network", &network); }
+    settings.restore(value); model.selected_network = network < 3 ? network : 0;
+    // A finger held during boot can defer rotation. Keep the filter aligned
+    // with the actual display and retry the saved fixed mode after release.
+    rotationPending = !board::setRotation(settings.automatic() ? 2 : settings.fixedRotation());
+    orientation.reset(board::rotation());
+    board::setBrightness(settings.brightness);
+    badge_clock::init();
+    badge::services_init(badge_clock::setFromPhone);
+    badge::UiCallbacks callbacks;
+    callbacks.request_setup = []{ startSetup(); };
+    callbacks.close_setup = closeSetup;
+    callbacks.brightness = [](int value) {
+        settings.setBrightness(value, board::millis());
+        board::setBrightness(settings.brightness); refreshModel();
+    };
+    callbacks.orientation = [](badge::Orientation mode) {
+        if (settings.setOrientation(static_cast<ConferenceOrientationMode>(mode), board::millis())) rotationPending = true;
+        refreshModel();
+    };
+    callbacks.network = [](int selected) {
+        if (selected >= 0 && selected < 3 && selected != model.selected_network) {
+            model.selected_network = selected; networkSaveAt = board::millis() + 1200;
+        }
+    };
+    badge::ui_init(board::display(), std::move(callbacks));
+    refreshModel();
+    line("CONFERENCE_READY"); status(nullptr);
+    while (true) {
+        uint32_t now = board::millis();
+        if (lastLoop) maxLoopGap = std::max(maxLoopGap, now - lastLoop);
+        lastLoop = now; ++loopCount;
+        board::poll(); badge_clock::poll(); pollCommands();
+        auto keys = board::buttons(); applyButton(buttons.update(keys.yellow, keys.blue, now));
+        auto contact = board::touch();
+        if (badge::ui_touch_test_active() && contact.valid && contact.sequence &&
+            (contact.pressed || badge::ui_touch_state().sample))
+            badge::ui_touch_sample(contact.rawX, contact.rawY, contact.x, contact.y, contact.pressed, board::rotation(), contact.sensor);
+        pollOrientation(now); persist(now);
+        auto portal = badge::portal_snapshot();
+        if (setupRequested) {
+            if (portal.active || portal.starting) badge::ui_show_setup(portal.ssid, portal.password, "192.168.4.1",
+                portal.outcome == badge::PortalOutcome::Saved ? "Saved / closing setup" : portal.outcome == badge::PortalOutcome::Cancelled ? "Cancelled / closing setup" : portal.starting ? "Starting setup..." : "");
+            else {
+                setupRequested = false;
+                badge::ui_close_setup(portal.outcome == badge::PortalOutcome::Saved);
+                refreshModel();
+            }
+        }
+        if (uint32_t(now - lastModel) >= 100) { lastModel = now; refreshModel(); }
+        badge::ui_tick(now); lv_timer_handler();
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+}

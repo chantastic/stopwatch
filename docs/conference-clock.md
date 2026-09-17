@@ -1,5 +1,12 @@
 # Conference clock and batch flashing
 
+The active native implementation is `firmware/factory_badge/main/clock_service.*`
+with checked RTC access in `board.*` and `vendor/rx8130/`. The HTTP endpoint and
+USB acknowledgment contract remain compatible. Arduino helper names below
+describe the retained implementation; see [factory-stack.md](factory-stack.md)
+for current task ownership and build details. Native unit readiness requires
+`conference-factory-3`.
+
 The conference firmware keeps **UTC in the StopWatch's RX8130CE hardware RTC**
 and sets the ESP32 system clock from it on boot. The display adds a saved UTC
 offset. It can adopt the flashing computer's clock over USB or the phone/browser
@@ -267,7 +274,7 @@ unrelated, or oversized serial lines cannot satisfy verification.
 
 Finally the helper sends `{"op":"status","nonce":"<new hex nonce>"}` and
 requires a matching `CONFERENCE_STATUS` reply. This release expects build
-`conference-settings-2`, board `30`, flash `16777216`, PSRAM `8388608`,
+`conference-factory-3`, board `30`, flash `16777216`, PSRAM `8388608`,
 `store_ready`, `clock_valid`, and `rtc` all true; `setup` false; and both
 `wifi_mode` and `bluetooth` zero. A mounted existing manual profile is never
 cleared to satisfy readiness. Update the expected build alongside a future

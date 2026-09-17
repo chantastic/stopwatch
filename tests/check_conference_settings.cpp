@@ -7,6 +7,14 @@
 #include "../firmware/devices_badge/orientation_filter.h"
 
 int main() {
+  // The stored format permits non-step values. A direct LVGL value change must
+  // terminate and persist correctly even if a previous build saved 55%.
+  ConferenceSettings offGrid;
+  assert(offGrid.restore(0xc7010037u) && offGrid.brightness == 55);
+  assert(offGrid.setBrightness(50, 10) && offGrid.brightness == 50);
+  assert(offGrid.pending() && offGrid.encoded() == 0xc7010032u);
+  assert(offGrid.setBrightness(200, 20) && offGrid.brightness == 100);
+  assert(offGrid.setBrightness(-1, 30) && offGrid.brightness == 10);
   auto rotate = [](ConferenceTouchPoint p, int rotation) {
     switch (rotation) {
       case 1: return ConferenceTouchPoint{p.y, 467-p.x};

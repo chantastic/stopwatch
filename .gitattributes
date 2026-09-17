@@ -1,0 +1,2 @@
+# Unified patch context includes intentional trailing spaces on blank lines.
+firmware/factory_badge/patches/*.patch -whitespace

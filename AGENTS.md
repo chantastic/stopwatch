@@ -16,7 +16,11 @@
 
 ## Established constraints
 
-- Active firmware is the Arduino sketch in `firmware/devices_badge/`.
+- Active firmware is the native ESP-IDF project in `firmware/factory_badge/`.
+  Read [factory-stack.md](docs/factory-stack.md) for the LVGL/Smooth/Mooncake
+  architecture, per-page views, hardware boundary and pinned dependencies.
+  `firmware/devices_badge/` is the retained Arduino implementation and shared
+  portable helpers; do not implement new views there.
 - Current product is the **offline conference badge**. Read
   [conference-badge.md](docs/conference-badge.md) and
   [conference-clock.md](docs/conference-clock.md). The six-page UI supersedes
@@ -32,18 +36,18 @@
   minimum and delayed persistent saves. Orientation is exactly Free (automatic),
   Default (rotation 0), or 180° (rotation 2); apply changes after touch release.
   Phone setup synchronizes a fresh browser clock independently of profile Save
-  and Cancel. Settings-launched setup returns to Settings. Schedule intervals use
-  absolute UTC; untimed placeholders never become current. Keep all input/setup/
-  save deadlines on monotonic time, independent of clock corrections.
+  and Cancel. Settings-launched setup returns to Settings. The published agenda
+  in `factory_badge/main/schedule.h` repeats daily using the badge's local clock:
+  current rows say On now, passed rows are dimmed, and invalid time marks neither.
+  Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.
   Never apply calibration, save touch data, or start networking from this test.
-  The current global touch-scale trial in `conference_touch_scale.h` applies
-  once after M5GFX conversion to both normal input and the test marker. Keep
-  native correction axes/origin consistent across rotations, then apply the
-  separate screen-relative residual once; raw readouts and injected
-  UI-coordinate diagnostics stay unchanged. See hardware.md for fit limitations.
+  Native CST820 coordinates feed LVGL directly; LVGL owns touch rotation.
+  The factory board adapter translates M5 rotation numbering once and keeps
+  its 468×466 native display geometry. Do not reintroduce the retired Arduino
+  scale/offset trial. See hardware.md for its historical fit limitations.
   Label simulated inputs; they cannot verify physical sensor alignment.
 - Build once for a batch; each flash provisions and verifies a fresh hardware RTC
   time and storage/radio readiness. Preserve the partition layout and user state.
@@ -72,6 +76,9 @@
   generated binaries outside Git. Build and test output goes in `.build/`.
 - `scripts/build.sh` compiles; `scripts/test.sh` runs the host checks on macOS.
   Use the dependency versions in README.md.
+  LVGL and hardware state belong to the main task; HTTP/DNS run on workers.
+  Phone clock writes are marshalled back to main. Update view models through
+  callbacks; pages must not access hardware, NVS, Wi-Fi, or profile storage.
 - `scripts/flash.sh PORT` rebuilds and uploads application components. Firmware
   changes should preserve the partition layout and saved user state.
 - Avatar and profile behavior must remain dynamic. Avoid static personal assets.

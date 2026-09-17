@@ -15,7 +15,10 @@ the device is currently attached or authenticated.
 
 ## Source, build, and upload
 
-The active sketch is `firmware/devices_badge/`. The repository has moved between
+The active project is `firmware/factory_badge/`, using native ESP-IDF and the
+factory UI stack; read [factory-stack.md](factory-stack.md). The retained Arduino
+source at `firmware/devices_badge/` supplies historical tests and portable helpers.
+The repository has moved between
 directories; use paths relative to the checkout. Older source copies beside the
 original backup are historical. They are not the working firmware or backend.
 

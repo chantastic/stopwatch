@@ -35,3 +35,8 @@ __pycache__/
 # Arduino-generated metadata
 build.options.json
 compile_commands.json
+
+# ESP-IDF fetches managed components; its resolved dependency lock is tracked.
+firmware/factory_badge/managed_components/
+firmware/factory_badge/sdkconfig
+firmware/factory_badge/sdkconfig.old

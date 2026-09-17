@@ -1,0 +1,47 @@
+dependencies:
+  espressif/cmake_utilities:
+    component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.5.3
+  espressif/i2c_bus:
+    component_hash: 4e990dc11734316186b489b362c61d41f23f79d58bc169795cec215e528cba14
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: '*'
+    - name: idf
+      require: private
+      version: '>=4.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.5.0
+  idf:
+    source:
+      type: idf
+    version: 5.5.4
+  joltwallet/littlefs:
+    component_hash: 3af20a3d75c49db9dc2286fd50862c34055c9f578419ad1f2bf7ed3ed01391fe
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.22.3
+direct_dependencies:
+- espressif/cmake_utilities
+- espressif/i2c_bus
+- idf
+- joltwallet/littlefs
+manifest_hash: ccd11fa9a783d53c745150140d960cb34421e18612185ae3d0a85978d8203fdb
+target: esp32s3
+version: 2.0.0

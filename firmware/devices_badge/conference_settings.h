@@ -40,6 +40,9 @@ class ConferenceSettings {
   }
   bool adjustBrightness(int direction, uint32_t now) {
     int next = int(brightness) + (direction > 0 ? 10 : -10);
+    return setBrightness(next, now);
+  }
+  bool setBrightness(int next, uint32_t now) {
     if (next < MIN_BRIGHTNESS) next = MIN_BRIGHTNESS;
     if (next > MAX_BRIGHTNESS) next = MAX_BRIGHTNESS;
     if (next == brightness) return false;

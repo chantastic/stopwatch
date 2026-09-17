@@ -1,0 +1,56 @@
+[
+  {
+    "name": "mooncake",
+    "url": "https://github.com/Forairaaaaa/mooncake.git",
+    "ref": "v2.3.3",
+    "commit": "572a7e488641f1c3f22e85d65c27f095ecf27d12"
+  },
+  {
+    "name": "mooncake_log",
+    "url": "https://github.com/Forairaaaaa/mooncake_log.git",
+    "ref": "v1.5.0",
+    "commit": "554d55cd8c6e551b911b99cad274a46929f05bae"
+  },
+  {
+    "name": "smooth_ui_toolkit",
+    "url": "https://github.com/Forairaaaaa/smooth_ui_toolkit.git",
+    "ref": "v2.12.1",
+    "commit": "2c8b6c572192047636c78ea3ae95dc5be4955fce"
+  },
+  {
+    "name": "M5GFX",
+    "url": "https://github.com/m5stack/M5GFX.git",
+    "ref": "0.2.19",
+    "commit": "53a7184601f3667b030ba141c58b87ce2acfaa2a"
+  },
+  {
+    "name": "ArduinoJson",
+    "url": "https://github.com/bblanchon/ArduinoJson.git",
+    "ref": "v7.4.3",
+    "commit": "77771d3c07668e01d8f52acb03910c1110bb373f"
+  },
+  {
+    "name": "lvgl",
+    "url": "https://github.com/lvgl/lvgl.git",
+    "ref": "v9.5.0",
+    "commit": "85aa60d18b3d5e5588d7b247abf90198f07c8a63"
+  },
+  {
+    "name": "M5IOE1",
+    "url": "https://github.com/m5stack/M5IOE1",
+    "ref": "1.0.8",
+    "commit": "37db04861687858b6748f5dbd1a84439a6635c46"
+  },
+  {
+    "name": "M5PM1",
+    "url": "https://github.com/m5stack/M5PM1",
+    "ref": "1.0.6",
+    "commit": "8f1f1a60b3040088cd0ca2b9eb9d024ccc4d907f"
+  },
+  {
+    "name": "BMI270_BMM150_Sensor",
+    "url": "https://github.com/lbuque/BMI270_BMM150_Sensor.git",
+    "ref": "0.1.2",
+    "commit": "ae8bc480bca638d3458e65d5e9a4fff4270c1430"
+  }
+]

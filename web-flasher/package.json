@@ -1,0 +1,16 @@
+{
+  "name": "stopwatch-web-installer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "esptool-js": "0.6.1",
+    "js-md5": "0.8.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

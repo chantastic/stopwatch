@@ -1,12 +1,19 @@
 # M5Stack StopWatch conference badge
 
 An offline, locally configurable conference badge for the **M5Stack StopWatch**.
-The current scaffold uses the verified Arduino/M5Unified drivers and a 468×468
-round display. No internet, attendee account, cloud backend, or sign-in is needed.
+The active firmware uses the factory **ESP-IDF + LVGL + Smooth UI Toolkit +
+Mooncake** stack, with the factory CO5300 display and CST820 touch integration.
+No internet, attendee account, cloud backend, or sign-in is needed.
 
 Six pages: **init() animation → Schedule → Developers After Dark → Badge →
-Hack your Badge → Settings**. Schedule, invite and animation artwork are visibly temporary.
+Hack your Badge → Settings**. Schedule uses the [published init() agenda](https://workos.com/init),
+repeats daily in local time, highlights **On now**, and dims passed blocks.
+Invite and animation artwork remain temporary.
 The Hack QR opens [drop.workos.cloud/stopwatch](https://drop.workos.cloud/stopwatch).
+
+Browser release packaging and publication are documented in
+[web releases](docs/web-releases.md). The alpha installer preserves compatible
+conference badges; factory-layout conversion is not yet qualified.
 
 Use the physical left/right pushers or on-screen arrows to page. Swipe vertically
 to scroll Schedule or switch between GitHub, X/Twitter and LinkedIn within Badge.
@@ -36,11 +43,16 @@ device; simulated diagnostic input cannot establish it.
 
 ## Build and flash
 
-Install Arduino CLI, ESP32 core **3.3.10**, M5Unified **0.2.19**, M5GFX **0.2.26**,
-and ArduinoJson **7.4.3**. Use the pinned scripts for 16 MiB flash, 8 MiB OPI PSRAM,
-and the existing partition layout.
+Run the one-time setup below to install **ESP-IDF 5.5.4** and fetch the pinned
+factory dependencies. Builds use **LVGL 9.5.0**, **Smooth UI Toolkit 2.12.1**,
+**Mooncake 2.3.3**, and **M5GFX 0.2.19**. The reviewed USB discovery/preflight/upload
+wrapper still needs Arduino CLI and ESP32 core **3.3.10**; the application itself
+contains no Arduino or M5Unified runtime. Host tests also require CMake, Node.js,
+Clang, and the legacy ArduinoJson 7.4.3 headers for retained regression fixtures.
+See [the factory stack guide](docs/factory-stack.md) for source organization.
 
 ```sh
+./scripts/setup-factory.sh  # once per workstation
 ./scripts/test.sh
 ./scripts/build.sh
 ./scripts/flash.sh --no-build /dev/cu.usbmodemYOUR_PORT
@@ -65,11 +77,15 @@ developer profile, or photo is shipped.
 - [Hardware geometry and calibrated orientation](docs/hardware.md)
 - [Project instructions](AGENTS.md)
 
-Active source is `firmware/devices_badge/conference_app.h` with focused navigation,
-portal/profile-storage and clock modules. Host tests include failure injection;
+Active source is `firmware/factory_badge/main/`. Each native LVGL page has its own
+file under `ui/`, with shared widgets, styling and navigation. Board, profile/
+portal, and clock services have separate modules. Host tests include failure injection;
 physical device observations are separately labeled. Build outputs, uploaded test
 photos, diagnostic captures and private logs stay in ignored `.build/`.
 
+The former Arduino conference application remains under `firmware/devices_badge/`
+for reference and regression tests. `build-arduino-legacy.sh` builds that historical
+application; normal build/flash commands select the native factory stack.
 The prior connected AuthKit/voice badge remains in `legacy_connected_app.h`,
 [historical documentation](docs/connected-badge-history.md), and Git history.
 Its cached identities are not used by the manual conference badge. Shared services

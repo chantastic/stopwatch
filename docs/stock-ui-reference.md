@@ -7,6 +7,10 @@ inspection, not a measurement of factory firmware on the connected device.
 The temporary checkout and downloaded dependency licenses are under ignored
 `.build/vendor-reference/`.
 
+For the September 17 investigation into a reusable foundation across different
+hardware models, see [touch framework research](touch-framework-research.md).
+That recommendation is separate from the initial scaffold decision below.
+
 ## Frameworks and reuse
 
 The stock application uses **LVGL**, with the **Smooth UI Toolkit** C++ wrappers

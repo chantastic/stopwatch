@@ -13,6 +13,17 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17: use the published init() agenda from workos.com/init. Repeat it
+  daily in the badge's local time, highlight **On now**, and dim passed blocks.
+  Next start times delimit blocks; Happy hour stays current until midnight
+  because its end is unpublished. Preserve manual scrolling as time changes.
+
+- September 17: migrate the conference badge to the factory ESP-IDF/LVGL/Smooth/
+  Mooncake stack and rebuild views as native, modular LVGL components. Use the
+  factory raw CST820 input path; retire the empirical Arduino scale/offset trial.
+  Keep the six-page product, local setup, profile format, partition layout, NVS
+  preferences and UTC clock provisioning. See [factory-stack.md](factory-stack.md).
+
 - The later monorepo decision supersedes the original gateway source location:
   active Auth, Social, and Devices work is in private `chantastic/chan-services`.
   Gateway changes/releases use `~/Developer/chan-services/apps/devices` and the

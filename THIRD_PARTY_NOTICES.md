@@ -13,6 +13,16 @@ No license has yet been selected for this project's original code. Publishing th
 
 ## Build dependencies
 
+The native factory stack uses ESP-IDF, LVGL, Smooth UI Toolkit, Mooncake,
+mooncake_log, M5GFX, M5IOE1, M5PM1, BMI270_BMM150_Sensor, ArduinoJson,
+Espressif i2c_bus, and esp_littlefs under their respective upstream licenses.
+Exact framework revisions are in `firmware/factory_badge/frameworks.json`;
+managed transitive versions are in its `dependencies.lock`.
+Factory-derived board and controller code retains M5Stack's MIT attribution in
+`firmware/factory_badge/main/vendor/LICENSE-M5Stack` and source headers.
+The factory integration patches retain their upstream license via
+`firmware/factory_badge/FACTORY-LICENSE`.
+
 ESP32 Arduino, M5Unified, M5GFX, ArduinoJson, and their bundled components retain their upstream licenses. They are installed separately and are not relicensed by this repository.
 
 - [Arduino core for ESP32](https://github.com/espressif/arduino-esp32)

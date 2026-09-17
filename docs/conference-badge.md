@@ -1,7 +1,10 @@
 # Offline conference badge
 
-Current Settings release, September 17, 2026. Active entrypoint is
-`firmware/devices_badge/devices_badge.ino`, which includes `conference_app.h`.
+Factory-stack migration, September 17, 2026. Active entrypoint is
+`firmware/factory_badge/main/main.cpp`; see [factory-stack.md](factory-stack.md)
+for the current modules and migration verification. The behavior below remains
+the product contract. Arduino-specific rendering/input details and the dated
+verification reports describe the prior implementation, not the migrated build.
 The prior connected AuthKit/voice application is retained in
 `legacy_connected_app.h` and Git history. It is not initialized or linked into
 the conference application. No gateway changes are required.
@@ -11,8 +14,9 @@ the conference application. No gateway changes are required.
 The six primary pages wrap in this fixed order:
 
 1. **init()**: lightweight looping wordmark/orbit preview, local clock, battery.
-2. **Schedule**: vertically scrollable, explicitly labeled placeholder rows.
-   No event times, speakers, venues, or actual agenda have been supplied.
+2. **Schedule**: vertically scrollable published init() agenda, repeating daily
+   in the badge's local time. The current block says **On now**; passed blocks
+   are dimmed. Times, wrapped titles and available speaker details stay visible.
 3. **Developers After Dark**: honest invite placeholder with a reserved QR area.
    It deliberately has no scannable event destination yet.
 4. **Badge**: manual name/photo, init() brand, selected network icon/label and QR.
@@ -22,7 +26,7 @@ The six primary pages wrap in this fixed order:
    touch test, and orientation. All controls fit on one page; no settings
    scrolling is needed.
 
-The 468×468 framebuffer retains static side chevrons, top clock, bottom page
+The factory 468×466 framebuffer retains static side chevrons, top clock, bottom page
 name, and six dots. Useful content and QR quiet zones remain inside the round
 aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
 remains editable in setup. Standard firmware fonts have limited glyph coverage.
@@ -73,13 +77,26 @@ local setup used from Badge. Setup launched from Settings returns to Settings
 after Save, Cancel or timeout; successful setup launched elsewhere retains the
 prior return to Badge, and cancellation leaves its launch page selected.
 
-Schedule entries can carry explicit UTC start/end timestamps in
-`conference_schedule.h`. A valid clock highlights the first matching interval
-where `start <= now < end`, with an accent border and `Now /` label. Gaps, invalid
-intervals, invalid clocks and untimed rows have no current selection. Display
-timezone offsets never alter those UTC comparisons. Forward/backward clock
-corrections re-evaluate selection without moving the user's scroll position.
-The shipped placeholder rows remain untimed; no real agenda has been invented.
+The active agenda is `firmware/factory_badge/main/schedule.h`, sourced from
+[workos.com/init](https://workos.com/init) on September 17, 2026. Its nine blocks
+start at 8:00 AM, 9:30 AM, 11:00 AM, 11:30 AM, 12:30 PM, 1:30 PM, 3:00 PM,
+3:30 PM and 5:00 PM. Only the keynote currently has an assigned speaker;
+unannounced program speakers stay TBA rather than being inferred from the
+separate speaker list.
+
+At the user's request, the agenda intentionally repeats **every day** instead
+of being restricted to October 7. Current local minute is calculated from UTC
+plus the same saved offset as the badge clock. Starts are inclusive; the next
+start ends each block. The final Happy hour block stays current until midnight
+because no end time is published; its detail says `End time not listed`.
+Before 8:00 AM every block is upcoming. Midnight resets all rows to upcoming.
+An invalid clock selects no current/passed rows.
+
+On entry, the schedule scrolls to the current block. Subsequent clock changes
+update the highlight and dimming in place without moving the user's reading
+position. Titles and details wrap; row heights are based on their content.
+The older absolute-UTC helper in `firmware/devices_badge/conference_schedule.h`
+is retained only for the Arduino application and its historical tests.
 
 ## Touch alignment test
 
@@ -94,19 +111,16 @@ returns to Settings. Choose **Default** or **180°**, let the display rotate, th
 reopen the test to compare those poses. The test does not calibrate the sensor,
 save touch data, or start Wi-Fi or Bluetooth.
 
-The live marker uses a copy of M5Unified's raw sample transformed once by M5GFX,
-then the same continuous scale correction used by normal physical controls.
-The current provisional fit retains the measured scales, rotates the native
-offset with the hardware, and applies a separate screen-relative offset last.
-See the [hardware notes](hardware.md#combined-offset-trial) for the fit and limits.
-The test itself does not create/save a calibration. Normal gesture coordinates
-can remain latched until the flick threshold.
+The live marker uses the factory CST820 sample and the same LVGL rotation as
+normal input. The retired Arduino scale/offset fit is not applied. See the
+[hardware notes](hardware.md#combined-offset-trial) for that historical trial.
+The test does not create or save calibration.
 Serial `touch` input exercises the test display but is labeled **Simulated input**.
 It verifies dispatch and rendering, not sensor alignment. Physical alignment
 and any remaining offset still require the user's observation on the device.
 `touch_test_status` returns active/pressed/sample flags, sensor-versus-simulated
 source, corrected screen/raw coordinates, held rotation, `scale_trial`,
-`touch_model` (`scale-offset-2` for the combined-offset trial), and an optional valid hex nonce.
+`touch_model` (`factory-native`, with `scale_trial:false`), and an optional valid hex nonce.
 It reads only the temporary test state and does not activate the test.
 
 ## Local customization
@@ -189,7 +203,9 @@ it. It does not export request paths, headers, bodies, nonce or profile values.
 orientation mode, pending preference state/write count, page count, and current
 schedule index. A write count is per boot and is not a flash-wear measurement.
 
-Run `scripts/test.sh` and `scripts/build.sh`. New host checks cover gestures,
+Run `scripts/test.sh` and `scripts/build.sh`. Native checks cover real LVGL
+rotation, UI input/rendering, RTC validation, and cross-version profile storage.
+Retained Arduino host checks cover gestures,
 scroll bounds, network isolation, URL/name/image limits, atomic-storage failures,
 portal commit/cancel/timeout behavior, and fresh RTC/batch acknowledgments.
 Settings checks cover brightness bounds/debounce, fixed modes, drag rejection,
@@ -200,6 +216,13 @@ Hardware verification results and limits belong in the dated report below;
 compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
+
+Current native ESP-IDF/LVGL results are in the
+[factory verification report](factory-verification-2026-09-17.md).
+The populated daily agenda is covered by the
+[schedule verification report](schedule-verification-2026-09-17.md).
+The reports below describe the retired Arduino implementation and are retained
+as historical evidence, not acceptance of the new input or network code.
 
 See the [Settings verification report](conference-verification-2026-09-17.md)
 and the [earlier scaffold report](conference-verification-2026-09-16.md).
@@ -212,5 +235,5 @@ Production portal/profile/clock host fixtures pass; they are not a completed
 phone or hardware profile test.
 
 See [stock UI source research](stock-ui-reference.md) for the inspected framework,
-versions, MIT licensing, and the decision to reuse navigation patterns while
-keeping the pinned Arduino/M5Unified drivers.
+versions and MIT licensing, and [factory stack](factory-stack.md) for the later
+decision to migrate the runtime, board adapter and views to the factory stack.

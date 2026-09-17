@@ -1,5 +1,12 @@
 # Hardware and interaction notes
 
+> **Factory-stack migration, September 17, 2026:** active code is now
+> `firmware/factory_badge/`. Its factory CO5300 framebuffer is **468×466** and
+> CST820 readings feed LVGL directly, with rotation applied once. The Arduino
+> 468×468 geometry and scale/offset experiments below are historical; do not
+> transfer those corrections to the new board adapter. See
+> [factory-stack.md](factory-stack.md) for current integration and verification.
+
 > **Current application: offline conference badge (September 17, 2026).**
 > Read [conference-badge.md](conference-badge.md) for the current six-page UI,
 > manual setup, radio policy and storage model, and
@@ -30,15 +37,17 @@ hardware-revision notes; use the project observations below for firmware behavio
 | Flash | 16 MiB / 16,777,216 bytes, confirmed on the development device |
 | PSRAM | 8 MiB / 8,388,608 bytes; use **OPI** mode |
 | Screen | Round 1.75-inch AMOLED, CO5300 over QSPI |
-| Display coordinates | **468 × 468** in the pinned M5GFX driver and device framebuffer |
-| Touch | CST820B; accessed through M5Unified/M5GFX |
+| Display coordinates | **468 × 466** in the native factory HAL; quarter turns swap dimensions |
+| Touch | CST820B; factory controller driver → LVGL |
 | Orientation sensor | BMI270 six-axis IMU; the badge uses acceleration |
 | Network | 2.4 GHz Wi-Fi |
 | Power | USB-C, M5PM1 power management, nominal 450 mAh battery; separate power button |
 | NFC | No built-in NFC on this StopWatch |
 
-The manufacturer's nominal display resolution is **466 × 466**. Keep the working
-468 × 468 coordinate system: M5GFX configures that size with an internal panel
+The manufacturer's nominal display resolution is **466 × 466**. The active
+factory adapter retains its HAL's 468×466 framebuffer with an X offset of 6.
+The following describes the previous Arduino integration: M5GFX configured a
+468 × 468 coordinate system with an internal panel
 offset. Its StopWatch driver also explicitly requires OPI PSRAM. The same
 driver's board detection distinguishes StopWatch's touch controller and absence
 of NFC from the PaperMono family. Relevant upstream source:
@@ -51,6 +60,14 @@ The framebuffer size and installed memory were also observed on the development
 device. A framebuffer capture includes corners hidden by the round screen: QR
 verification has used both the full image and a 232-pixel-radius circular
 aperture. Preserve quiet zones and keep useful content inside the visible circle.
+
+**Native rotation refresh finding, September 17, 2026:** the first native build
+could leave the physical screen frozen at 180° while USB, button dispatch and
+framebuffer capture remained responsive. Pinned M5GFX 0.2.19's framebuffer
+`writePixels` reverses dirty-rectangle endpoints without normalizing them at
+180°, and fails to swap dirty axes at quarter turns. The active board adapter
+uses bounded `pushImage` row chunks through the correctly rotated `writeImage`
+path. This is a display-transfer issue, independent of touch calibration.
 
 The product documents ES8311 audio, an AW8737A speaker amplifier, RX8130CE RTC,
 and vibration hardware. Current conference firmware enables the internal IMU
@@ -69,8 +86,9 @@ starts capture. Creating the recorder worker alone does not record sound.
 
 ## Pins and controls
 
-M5Unified owns hardware initialization. Prefer its APIs instead of adding a
-second display, touch, or IMU driver.
+The native `board` module owns hardware initialization. Use that single adapter;
+do not add another display, touch, or IMU driver in a view. M5Unified owned this
+boundary in the retained Arduino implementation described below.
 
 | Connection | Mapping |
 | --- | --- |
@@ -89,7 +107,7 @@ v1.0 sticker error: a pin marked `BAT` can actually be a **5V input**, where a
 battery must not be connected. On v1.0.1 that pin is a battery connection.
 Confirm the revision and pin map before wiring rear expansion power.
 
-The current interaction contract is intentional:
+The historical connected application's interaction contract was:
 
 - Blue advances LinkedIn → X → GitHub, skipping unavailable accounts.
 - Yellow is reserved and leaves the badge unchanged.
@@ -143,8 +161,9 @@ rotation stable while the device hangs or is handled:
 - Cancel settling after a missing sample, a gap over 250 ms, an ambiguous fresh
   direction, or touch contact/release detail. A flat or diagonal pose keeps the
   last orientation.
-- Change display rotation only after touch dispatch and full release. M5GFX
-  transforms subsequent touch coordinates; do not apply another manual rotation.
+- Change display rotation only after touch dispatch and full release. In the
+  active native runtime, LVGL transforms touch coordinates once; do not apply
+  another manual rotation. M5GFX performed this step in the Arduino build.
 
 All four cardinal orientations are supported. Rotation redraws local cached
 data and does not trigger a profile request or save rotation to flash.
