@@ -242,6 +242,12 @@ schedule index. `page_count` is the visible count; `after_dark_unlocked` and
 `after_dark_save_pending` report reveal/persistence state without user data.
 A write count is per boot and is not a flash-wear measurement.
 
+`scripts/verify-factory.py` captures the currently visible pages. It checks the
+fresh reveal state before visiting After Dark and records a locked invitation in
+`skipped_pages`, alongside the stable IDs in `captured_pages`. It never changes
+the clock or unlocks the invitation to increase capture coverage. A skipped page
+is not a verification of its invitation UI.
+
 Run `scripts/test.sh` and `scripts/build.sh`. Native checks cover real LVGL
 rotation, UI input/rendering, RTC validation, and cross-version profile storage.
 Retained Arduino host checks cover gestures,
