@@ -2,10 +2,40 @@
 #include <cstdio>
 #include "../firmware/devices_badge/conference_settings.h"
 #include "../firmware/devices_badge/conference_touch_test.h"
+#include "../firmware/devices_badge/conference_touch_scale.h"
 #include "../firmware/devices_badge/conference_navigation.h"
 #include "../firmware/devices_badge/orientation_filter.h"
 
 int main() {
+  // Measured region medians reduce error with one continuous transform, rather
+  // than snapping to a target. Both axes shrink; the top remains near its target.
+  const int measured[][4] = {{234,119,234,120}, {92,264,112,234}, {249,257,234,234}, {386,257,356,234}, {238,401,234,362}};
+  for (const auto &p : measured) {
+    auto corrected = conferenceScaleTouch(p[0], p[1], 0);
+    assert(abs(corrected.x-p[2]) <= 8 && abs(corrected.y-p[3]) <= 7);
+  }
+  auto rotate = [](ConferenceTouchPoint p, int rotation) {
+    switch (rotation) {
+      case 1: return ConferenceTouchPoint{p.y, 467-p.x};
+      case 2: return ConferenceTouchPoint{467-p.x, 467-p.y};
+      case 3: return ConferenceTouchPoint{467-p.y, p.x};
+      default: return p;
+    }
+  };
+  // A physical point has the same correction in every display orientation.
+  for (int x=-100;x<=560;x+=11) for (int y=-100;y<=560;y+=13) {
+    auto corrected = conferenceScaleTouch(x,y,0);
+    for (int r=0;r<4;++r) {
+      auto input=rotate({x,y},r), expected=rotate(corrected,r);
+      auto actual=conferenceScaleTouch(input.x,input.y,r);
+      assert(abs(actual.x-expected.x)<=1 && abs(actual.y-expected.y)<=1);
+    }
+    auto next=conferenceScaleTouch(x+12,y+12,0);
+    assert(next.x>corrected.x && next.y>corrected.y);
+  }
+  auto outside=conferenceScaleTouch(-100,600,0);
+  assert(outside.x<0 && outside.y>467); // No hidden edge clamp.
+
   ConferenceSettings settings, restored;
   assert(settings.brightness == 50 && settings.automatic() && !settings.pending());
   assert(!restored.restore(0));

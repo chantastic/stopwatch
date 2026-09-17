@@ -39,6 +39,10 @@
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.
   Never apply calibration, save touch data, or start networking from this test.
+  The current global touch-scale trial in `conference_touch_scale.h` applies
+  once after M5GFX conversion to both normal input and the test marker. Keep
+  correction axes/origin consistent across rotations; raw readouts and injected
+  UI-coordinate diagnostics stay unchanged. See hardware.md for fit limitations.
   Label simulated inputs; they cannot verify physical sensor alignment.
 - Build once for a batch; each flash provisions and verifies a fresh hardware RTC
   time and storage/radio readiness. Preserve the partition layout and user state.

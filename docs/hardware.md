@@ -158,7 +158,7 @@ median 401, a median downward error of 39 pixels. Side-region release positions
 had median X=92 near the left target X=112, and X=386 near the right target
 X=356. Those side targets were inferred from regions, not individually labeled
 by the sampling tool; the user also reported the other axis feeling displaced.
-This supports investigating both axes. No correction has yet been applied.
+This established the baseline before the scale trial below.
 Private samples: `.build/touch-test-verification/live-20260917-090738.jsonl`.
 
 Pinned M5GFX 0.2.26 source explains the observed raw-to-screen factor 239/233:
@@ -171,6 +171,41 @@ labeled targets across the screen and validate both fixed orientations before
 choosing or persisting a calibration. The source issue alone does not explain
 the full measured offset, and injected display-coordinate tests cannot qualify
 physical alignment.
+
+### Continuous scale trial
+
+The user requested a scale correction derived from the recorded test, rather
+than per-target mapping or treating the suggested 1.2 factor as exact. Grouping
+the released samples by target region gives these median display coordinates
+in rotation 0 (all five regions receive equal weight in the fit):
+
+| Region | Reported median | Target |
+| --- | --- | --- |
+| Top | 234, 119 | 234, 120 |
+| Left | 92, 264 | 112, 234 |
+| Center | 249, 257 | 234, 234 |
+| Right | 386, 257 | 356, 234 |
+| Bottom | 238, 401 | 234, 362 |
+
+Separate least-squares scale/offset fits produce `X = 0.82758047844*x +
+35.54620127` and `Y = 0.85758081377*y + 14.17202075`. The implied overscaling
+is about 20.8% horizontally and 16.6% vertically. The vertical equation has a
+fixed point near Y=100, consistent with the user confirming the upper target
+was already close. Fitted median residuals are at most about 8 pixels; this is
+a prediction on the old samples, not a fresh physical verification.
+
+`conference_touch_scale.h` applies these continuous equations once after
+M5GFX conversion, to both normal physical input and the live touch-test marker.
+For rotated displays, it transforms the correction axes/origin, preserving the
+same physical correction. Raw readouts and injected UI-coordinate diagnostics
+are unchanged. There is no target lookup, edge clamp, saved calibration, or
+library modification. Existing M5Unified click/drag eligibility still uses its
+original coordinates and thresholds; application release semantics are retained.
+
+This is a provisional trial for the observed development board. Upper/bottom
+aiming was user-confirmed; the side/center region labels were inferred. Fresh
+touches and comparison in both fixed orientations are still needed, and these
+coefficients are not a validated default for the roughly 400-unit batch.
 
 ## Build target, USB, and flash layout
 

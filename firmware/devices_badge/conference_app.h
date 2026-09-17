@@ -10,6 +10,7 @@
 #include "conference_navigation.h"
 #include "conference_settings.h"
 #include "conference_touch_test.h"
+#include "conference_touch_scale.h"
 #include "conference_profile_store.h"
 #include "conference_portal.h"
 #include "conference_clock.h"
@@ -222,7 +223,7 @@ static void conferenceSettingsView() {
 static void conferenceTouchTestView() {
   auto &d = M5.Display;
   conferenceText("Touch test", 234, 54, &fonts::FreeSansBold12pt7b);
-  conferenceText("Touch or drag across the targets", 234, 82, &fonts::Font0, DIM);
+  conferenceText("Touch targets / scale correction on", 234, 82, &fonts::Font0, DIM);
   const int points[][2] = {{234, 120}, {234, 234}, {234, 362}, {112, 234}, {356, 234}};
   for (const auto &point : points) {
     d.drawCircle(point[0], point[1], 14, TFT_WHITE);
@@ -365,6 +366,7 @@ static void conferenceTouchTestStatus(const char *nonce) {
   status["x"] = touchTest.x; status["y"] = touchTest.y;
   status["raw_x"] = touchTest.rawX; status["raw_y"] = touchTest.rawY;
   status["rotation"] = touchTest.rotation;
+  status["scale_trial"] = true;
   status["nonce"] = conference_clock::validNonce(nonce) ? nonce : "";
   Serial.print("TOUCH_TEST_STATUS "); serializeJson(status, Serial); Serial.println();
 }
@@ -501,13 +503,15 @@ void loop() {
         // same raw sample and transform once to show even small finger movement.
         auto raw = M5.Touch.getTouchPointRaw(); auto point = raw;
         M5.Display.convertRawXY(&point, 1);
-        if (touchTest.observe(point.x, point.y, true, true, raw.x, raw.y)) conferenceRedraw = true;
+        auto scaled = conferenceScaleTouch(point.x, point.y, conferenceOrientation.rotation());
+        if (touchTest.observe(scaled.x, scaled.y, true, true, raw.x, raw.y)) conferenceRedraw = true;
       }
       if (touch.wasReleased()) { ++conferenceInputCount; if (touchTest.release()) conferenceRedraw = true; }
     } else {
-      if (touch.wasPressed()) navigation.begin(touch.x, touch.y, millis());
-      if (touch.isPressed() && navigation.move(touch.x, touch.y, !conferenceSetup) != ConferenceGesture::None) conferenceRedraw = true;
-      if (touch.wasReleased()) { ++conferenceInputCount; conferenceGestureEnd(touch.x, touch.y, millis(), touch.wasClicked()); }
+      auto scaled = conferenceScaleTouch(touch.x, touch.y, conferenceOrientation.rotation());
+      if (touch.wasPressed()) navigation.begin(scaled.x, scaled.y, millis());
+      if (touch.isPressed() && navigation.move(scaled.x, scaled.y, !conferenceSetup) != ConferenceGesture::None) conferenceRedraw = true;
+      if (touch.wasReleased()) { ++conferenceInputCount; conferenceGestureEnd(scaled.x, scaled.y, millis(), touch.wasClicked()); }
     }
   }
   if (!touchTest.active && conferenceOrientationPending && !navigation.touching() && M5.Touch.getCount() == 0) {

@@ -1,5 +1,34 @@
 # Conference Settings verification — September 17, 2026
 
+## Follow-up: measured continuous touch scaling
+
+The user requested a continuous scale correction based on the earlier physical
+test, with the upper region remaining close. The development-board trial now
+uses the per-axis scale/offset fit documented in
+[hardware notes](hardware.md#continuous-scale-trial). It does not use per-target
+lookup, snapping, an assumed exact 1.2 factor, or saved calibration parameters.
+
+Full host tests and the firmware build pass. Regression checks cover the five
+recorded region medians, monotonic scaling, unclamped out-of-range coordinates,
+and thousands of points across all four orientations (within one pixel of the
+rotate/correct/rotate reference). Independent review reproduced the fitted
+coefficients and checked both physical input call sites receive the correction
+exactly once, while injected display coordinates remain unchanged.
+
+The guarded uploader verified the existing partition map, component writes,
+and fresh RTC/storage/radio readiness, with no filesystem initialization.
+On-board dispatch checks confirmed the new `scale_trial` flag, touch-test entry,
+unchanged synthetic coordinates, pusher exit, and reopening with no old marker.
+Starting preferences/profile metadata were preserved. A subsequent 60-second
+live observation received no physical touches, so this trial has **not** yet
+been physically validated. The test was left open in its entry rotation 2,
+with saved mode Free and brightness 50%; the serial observer closed afterward.
+
+Application SHA-256:
+`f0bfc8bd6619985a53d93500a10ddcf45ca6224dcf041a40221b3e950baf7073`.
+Private evidence: `.build/touch-scale-{tests,build,flash}.log` and
+`.build/touch-test-verification/scaled-live-20260917-091932.jsonl`.
+
 ## Follow-up: Settings touch test
 
 Settings now includes **Touch test** next to Connect phone. The modal shows five
