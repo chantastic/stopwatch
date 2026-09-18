@@ -37,6 +37,12 @@ bool init();                   // Initializes hardware and LVGL display/input.
 void poll();                   // Hardware only; caller runs lv_timer_handler().
 uint32_t millis();
 const TouchSample& touch();
+// Main-task Morse feedback: 40% PWM while a valid contact is held, at most
+// 1400 ms. Release/cancellation stops it. These are checked driver states;
+// active also includes an uncertain output awaiting a successful OFF retry.
+void setInputVibration(bool pressed);
+bool inputVibrationAvailable();
+bool inputVibrationActive();
 // Begin/move with pressed=true, end with false. The completed release survives
 // until LVGL consumes it. Rejects starting while a real finger is down.
 bool injectTouch(int displayedX, int displayedY, bool pressed);

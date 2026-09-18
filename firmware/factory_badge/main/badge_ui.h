@@ -45,6 +45,7 @@ struct UiCallbacks {
     std::function<void(int)> bookmark; // Toggle this agenda item.
     std::function<void()> reset_badge; // Only after a fresh confirmation tap.
     std::function<void()> unlock_after_dark; // Complete touch-entered Morse word.
+    std::function<void(bool)> morse_pressed; // Input haptic; false on release/cancellation.
 };
 
 struct UiTouchSample {

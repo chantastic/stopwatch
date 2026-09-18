@@ -13,8 +13,14 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 18 standard timing and haptics: use ITU Morse 1/3/7-unit nominal
+  timing with a 200 ms unit and tolerant 400 ms receive decisions. Recognize
+  1400 ms word gaps, so `init` remains one word. Keep the eager final release and
+  2.5-second failed-attempt reset. User chose buzz while pressing; use the existing
+  M5IOE1 motor at 40% duty with release/cancellation shutdown and a 1400 ms cap.
+
 - September 18 Morse feedback: display the entered dots/dashes with a wider
-  letter gap after 600 ms quiet. Accept correct `init` on final dash release.
+  letter gap (timing subsequently standardized above). Accept correct `init` on final dash release.
   After 2.5 seconds released, shake then quickly fade an incomplete/wrong attempt
   and restart; a new press interrupts feedback immediately. Use native LVGL
   layout/animation and keep code recognition independent of the wall clock.

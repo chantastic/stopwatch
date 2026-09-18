@@ -44,11 +44,16 @@ Successful touch code uses the existing native intro GIF once behind a native
 LVGL word sequence (`You're`, `Invited`, `To`), then reveals the invitation heading.
 Page lifetime owns the decoder and animations; no second player is introduced.
 Registered dots/dashes use native LVGL objects with flex letter groups and
-wrapping. A 600 ms gap spaces letters; the final correct dash submits on release.
+wrapping. A 200 ms unit defines the standard 1/3/7 Morse timing, with tolerant
+400 ms dot/dash and letter-gap decisions and a 1400 ms word boundary. The final
+correct dash submits on release.
 The recognizer reports a 2.5-second released-idle reset, and the view shakes for
 220 ms then fades for 160 ms using a native animation. A new press cancels that
 animation without discarding the new contact; page destruction cancels both
 feedback and reveal callbacks.
+Press/release haptic callbacks go through main to the existing board M5IOE1 PWM
+driver. The board owns motor state, verified writes, bounded holds and stop retries;
+pages never issue I2C calls or create a motor worker.
 
 ## Factory baseline and deliberate adaptations
 

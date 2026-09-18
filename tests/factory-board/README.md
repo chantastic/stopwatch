@@ -20,6 +20,13 @@ The touch provenance test uses production sample-update helpers to verify that
 idle sensor polls after an injected release keep the marker labeled simulated,
 until a fresh physical contact supplies a real coordinate.
 
+The vibration test runs the production input-feedback controller against a fake
+motor transport. It checks startup OFF, one-time 5 kHz setup, 40% duty, contact
+release/cancellation, the 1.4-second hold cap, timer wrap, no repeated held/idle
+writes, ambiguous ON failure followed by immediate OFF, and rate-limited OFF
+retries. It does not measure vibration strength, motor current, I2C latency or
+physical shutoff. The deadline runs on the main task; it is not a hardware timer.
+
 The flush test compiles the actual pinned M5GFX framebuffer driver and pixel
 conversion implementation against memory, with only electrical/platform calls
 stubbed. It reproduces the old streaming-write regression: at 180 degrees, RAM

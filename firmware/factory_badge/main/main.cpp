@@ -114,6 +114,8 @@ void status(const char* nonce) {
     data["page_count"] = badge::ui_page_count(); data["page"] = badge::ui_page_index();
     data["after_dark_unlocked"] = afterDark.unlocked();
     data["after_dark_save_pending"] = afterDark.pending();
+    data["vibration_available"] = board::inputVibrationAvailable();
+    data["vibration_active"] = board::inputVibrationActive();
     data["brightness_percent"] = settings.brightness;
     data["orientation_mode"] = settings.orientationName();
     data["rotation"] = board::rotation(); data["preferences_pending"] = settings.pending();
@@ -464,6 +466,7 @@ extern "C" void app_main() {
     callbacks.unlock_after_dark = [] {
         if (afterDark.unlock(board::millis())) refreshModel();
     };
+    callbacks.morse_pressed = [](bool pressed) { board::setInputVibration(pressed); };
     badge::ui_init(board::display(), std::move(callbacks));
     refreshModel();
     line("CONFERENCE_READY"); status(nullptr);

@@ -78,10 +78,16 @@
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation
   and pushers never enter Morse. A successful code plays the existing intro GIF
   once with `You're` → `Invited` → `To`, then reveals the invitation heading.
-  Show registered dots/dashes with spaced letter groups after 600 ms quiet.
+  Morse uses a 200 ms unit and standard 1/3/7 ratios: dot/symbol gap 200 ms,
+  dash/letter gap 600 ms, word gap 1400 ms. Receive thresholds tolerate hand
+  timing: dot/dash and letter gaps split at 400 ms; a word gap breaks `init`.
+  Show registered dots/dashes with spaced letter/word groups.
   Accept the correct final dash on release. An incorrect/incomplete attempt
   restarts after 2.5 seconds released, with a brief native shake then fade;
   the next press interrupts feedback immediately and starts a fresh attempt.
+  Buzz gently during each locked-page press through the main-owned board motor
+  adapter (existing M5IOE1 PWM), stopping on release/cancellation or a 1400 ms
+  hold limit. No idle/startup vibration; never access motor hardware from views.
   Dragging more than 10 pixels, a cancelled press, navigation, modals or rotation
   cancel code entry. Long holds on this surface are Morse dashes, not ordinary
   taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,

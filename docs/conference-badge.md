@@ -66,10 +66,10 @@ code. After Dark always appears in navigation. The subsequent usability update
 replaces the small square target with the whole page and a prominent prompt:
 `tap the code to reveal a secret invitation`. Its navigation arrows retain their
 normal actions. The rest of the locked page accepts `init` in Morse:
-`.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Use short taps around
-150 ms, holds around 600 ms, short pauses within letters, and roughly one second
-between letters. Each registered symbol appears as a dot or dash above the
-prompt; after 600 ms quiet, a wider gap reserves the next letter's space. Only
+`.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Use 200 ms taps,
+600 ms holds, 200 ms pauses within letters and 600 ms pauses between letters.
+Each registered symbol appears as a dot or dash above the prompt; a recognized
+letter gap reserves the next letter's space, and a word gap is wider again. Only
 the entered symbols are shown, never decoded letters or the answer. The correct
 final hold reveals the invitation immediately on release, without a final pause.
 An incorrect or incomplete attempt ends after 2.5 seconds with no contact. Its
@@ -84,9 +84,15 @@ The ten-second loop releases its decoder/timer when finished or when the reader
 leaves; an already-unlocked page and timed reveals do not replay the code-success
 sequence. The static invitation remains until its real URL is supplied.
 
-The recognizer accepts dots of 50–349 ms and dashes of 350–1400 ms. Symbol gaps
-are 50–599 ms; letter pauses are 600–2499 ms; a whole attempt must finish within
-15 seconds. Incorrect prefixes keep displaying later registered symbols and
+The nominal timing follows [ITU-R M.1677-1 §2](https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.1677-1-200910-I!!PDF-E.pdf):
+dot and internal gap one unit, dash and letter gap three units, word gap seven
+units. Here one unit is 200 ms. The standard defines transmitted timing; the
+receiver's human-input tolerances are our implementation choice. Dots are
+50–399 ms, dashes 400–1400 ms, internal gaps 50–399 ms, and letter pauses
+400–1399 ms. A 1400 ms gap separates words; `init` must be one word, so a word
+break inside it makes the attempt incorrect without advancing the 2.5-second
+retry deadline. The entire attempt must finish within 15 seconds.
+Incorrect prefixes keep displaying later registered symbols and
 cannot accept a correct-looking suffix before the inactivity reset. Input is
 bounded to 32 ASCII symbols/spaces; overflow cannot unlock. Each release renews
 the inactivity deadline, and a held contact never triggers the idle restart.
@@ -98,6 +104,18 @@ accepted here rather than cancelled by the ordinary completed-tap helper.
 These are monotonic timers, unaffected by phone/USB clock sync. USB `button`
 actions cannot enter Morse; simulated touch sequences exercise software behavior
 without proving physical sensor alignment.
+
+The vibration experiment uses a gentle buzz while the locked-page contact is
+held. Release, drag, lost contact, navigation, a modal, rotation or reveal stops
+it. A hold is capped at 1400 ms and cannot restart the motor until a fresh press.
+The view sends contact edges to main; the board adapter uses the existing
+M5IOE1 motor PWM at 5 kHz and 40% duty. Startup/idle use 0% duty. Board polling
+also stops on invalid/released contact and the hold deadline. This is a software
+bound, not an independent hardware cutoff; failed stop writes are retried.
+The driver verifies its register writes, which does not measure perceived
+vibration strength. Nothing is persisted for this experiment.
+USB status reports `vibration_available` and `vibration_active`; the latter is
+conservative and also stays true while an uncertain output awaits a checked OFF.
 
 The automatic reveal has a fixed date/time cutoff: **October 7, 2026 at 1:30 PM
 in the badge's configured local time**. Any valid clock reading at or after that
@@ -430,6 +448,21 @@ Hardware verification results and limits belong in the dated report below;
 compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
+
+September 18 standard-timing/vibration follow-up: portable Morse sanitizer tests
+passed exact 200 ms-unit input, receiver boundary sweeps, single-word enforcement,
+word spacing, eager release and the unchanged retry deadline. Native UI tests
+passed nominal input and haptic edge/cancellation/hold/reveal cleanup. All five
+board checks passed; the production motor controller was also sanitizer-tested
+for startup clearing, bounded holds, timer wrap, ambiguous ON and failed-OFF retry.
+The build and guarded flash passed. Live status confirmed motor configuration and
+idle OFF. The badge was already unlocked, so its state was preserved and a
+simulated press on revealed content stayed quiet. Positive motor operation and
+subjective strength remain unverified by a physical trial. Saved indicators,
+original page, clock/storage and offline radios were preserved; no preference
+writes occurred. Application SHA-256:
+`76fb766b3209e67b3d32b0d5ed5f83df0059f7120bb61602f78e5bf95e3bf073`.
+Private evidence: `.build/morse-standard-haptics/`.
 
 September 18 Morse feedback: sanitized portable tests passed timing boundaries,
 all 8,192 seven-symbol/grouping combinations, eager final release, continued

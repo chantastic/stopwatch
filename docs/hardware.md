@@ -73,7 +73,16 @@ The product documents ES8311 audio, an AW8737A speaker amplifier, RX8130CE RTC,
 and vibration hardware. Current conference firmware enables the internal IMU
 and RTC; microphone and speaker initialization are disabled. The retained
 connected application configures its microphone for requested voice recording
-and did not initialize the RTC. Vibration and battery runtime are not validated.
+and did not initialize the RTC. Battery runtime is not validated.
+
+**Vibration experiment, September 18, 2026:** the motor uses M5IOE1 IO9 / PWM
+channel 0 at the factory's 5 kHz frequency. Locked-page Morse contacts request
+40% duty through the existing driver; release/cancellation and a 1400 ms hold
+limit request 0%. The main-owned board adapter retains startup motor clearing,
+checks touch/deadline on polling and retries failed stops. This software bound
+cannot guarantee shutdown during a stalled main task or persistent I2C failure.
+Driver register verification is distinct from physical motor/perceived-strength
+verification. See the current dated record in [conference-badge.md](conference-badge.md).
 The board's power controller handles its separate power button. See
 [voice replies](voice-replies.md) for recording limits and verification status.
 

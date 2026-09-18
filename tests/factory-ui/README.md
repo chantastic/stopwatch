@@ -22,11 +22,16 @@ settled agenda frames match a full redraw byte-for-byte after entry and endpoint
 native schedule/social scrolling; dynamic profile and
 avatar/company updates, social-only profiles and configured faces without chrome; QR expansion; setup return paths; and Touch test lifecycle.
 They do not validate the physical sensor, display transport, or orientation HAL.
-The touch-code view uses the production `MorseUnlock` timings: dots 50–349 ms,
-dashes 350–1400 ms, symbol gaps 50–599 ms, letter pauses 600–2499 ms, a 2.5-second
+The touch-code view uses standard nominal 200 ms dots/internal gaps, 600 ms
+dashes/letter gaps and 1400 ms word gaps. Production `MorseUnlock` accepts dots
+50–399 ms, dashes 400–1400 ms, internal gaps 50–399 ms and letter pauses
+400–1399 ms; a word boundary makes an incomplete `init` incorrect. It has a 2.5-second
 released-idle reset and a 15-second attempt bound. Correct input completes on the
 final dash release. Native dot/dash groups, letter spacing, shake/fade feedback,
 immediate retry during that animation and lifecycle cleanup are checked too.
+Haptic callbacks are checked for held-contact edges, bounded long holds, and
+shutdown on release, cancellation, view destruction, rotation and timed reveal;
+this fixture does not operate or measure a motor.
 Main owns clock policy and NVS persistence;
 the UI fixture observes its callback without writing a device unlock.
 

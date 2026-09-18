@@ -48,7 +48,10 @@ public:
         }
         update();
     }
-    ~InvitePage() override { lv_anim_delete(this, nullptr); }
+    ~InvitePage() override {
+        set_pressed_feedback(false);
+        lv_anim_delete(this, nullptr);
+    }
 
     void cancel_input() override { cancel(); }
     void update() override {
@@ -82,9 +85,15 @@ private:
     void cancel() {
         held_ = false;
         armed_ = false;
+        set_pressed_feedback(false);
         morse_.reset();
         clear_feedback();
         lv_obj_remove_state(root_, LV_STATE_PRESSED);
+    }
+    void set_pressed_feedback(bool pressed) {
+        if (pressed_feedback_ == pressed) return;
+        pressed_feedback_ = pressed;
+        if (context_.callbacks.morse_pressed) context_.callbacks.morse_pressed(pressed);
     }
     void render_input(const char* text) {
         if (displayed_input_ == text) return;
@@ -199,6 +208,8 @@ private:
     }
     void sample() {
         if (submitted_ || context_.model.after_dark_unlocked) return;
+        if (held_ && uint32_t(lv_tick_get() - pressed_at_) >= MorseUnlock::MaxHoldMs)
+            set_pressed_feedback(false);
         const bool accepted = morse_.update(held_, false, lv_tick_get());
         if (morse_.restartCount() != restart_count_) {
             restart_count_ = morse_.restartCount();
@@ -222,6 +233,8 @@ private:
             if (restarting_) clear_feedback();
             lv_indev_get_point(input, &start_);
             held_ = armed_ = true;
+            pressed_at_ = lv_tick_get();
+            set_pressed_feedback(true);
             sample();
         } else if (code == LV_EVENT_PRESSING && input && armed_) {
             lv_point_t point;
@@ -231,6 +244,7 @@ private:
             cancel();
         } else if (code == LV_EVENT_RELEASED && armed_) {
             held_ = armed_ = false;
+            set_pressed_feedback(false);
             sample();
         }
         // LONG_PRESSED is intentionally accepted: holds are Morse dashes.
@@ -240,9 +254,10 @@ private:
     MorseUnlock morse_;
     std::string displayed_input_;
     lv_point_t start_{};
-    uint32_t restart_count_ = 0;
+    uint32_t restart_count_ = 0, pressed_at_ = 0;
     int displayed_state_ = -1, reveal_stage_ = 3;
-    bool held_ = false, armed_ = false, submitted_ = false, celebration_done_ = false, restarting_ = false;
+    bool held_ = false, armed_ = false, submitted_ = false, celebration_done_ = false, restarting_ = false,
+         pressed_feedback_ = false;
 };
 std::unique_ptr<PageView> make_after_dark(Context& c, lv_obj_t* p) { return std::make_unique<InvitePage>(c, p); }
 } // namespace badge::ui

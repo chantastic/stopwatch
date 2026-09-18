@@ -27,8 +27,9 @@ struct Input {
         return result;
     }
     void expect(const char* text) const { assert(!std::strcmp(recognizer.input(), text)); }
-    void word(uint32_t dot = 150, uint32_t dash = 650,
-              uint32_t innerGap = 150, uint32_t letterGap = 800) {
+    void word(uint32_t dot = MorseUnlock::DotMs, uint32_t dash = MorseUnlock::DashMs,
+              uint32_t innerGap = MorseUnlock::SymbolGapMs,
+              uint32_t letterGap = MorseUnlock::LetterGapMs) {
         pulse(dot, innerGap); pulse(dot, letterGap);  // i
         pulse(dash, innerGap); pulse(dot, letterGap); // n
         pulse(dot, innerGap); pulse(dot, letterGap);  // i
@@ -42,6 +43,14 @@ struct Input {
 };
 
 void validWords() {
+    // The sending ratios come from ITU-R M.1677-1. Receiver tolerances are
+    // deliberately separate: nominal 1/3/7-unit signals must always work.
+    static_assert(MorseUnlock::UnitMs == 200);
+    static_assert(MorseUnlock::DotMs == MorseUnlock::UnitMs);
+    static_assert(MorseUnlock::DashMs == 3 * MorseUnlock::UnitMs);
+    static_assert(MorseUnlock::SymbolGapMs == MorseUnlock::UnitMs);
+    static_assert(MorseUnlock::LetterGapMs == 3 * MorseUnlock::UnitMs);
+    static_assert(MorseUnlock::WordGapMs == 7 * MorseUnlock::UnitMs);
     for (bool blue : {false, true}) {
         Input r; r.blue = blue;
         r.word(); assert(r.unlocks == 1); r.expect("");
@@ -51,12 +60,15 @@ void validWords() {
     }
     Input fastest;
     fastest.word(MorseUnlock::MinHoldMs, MorseUnlock::DashThresholdMs,
-                 MorseUnlock::MinSymbolGapMs, MorseUnlock::LetterGapMs);
+                 MorseUnlock::MinSymbolGapMs, MorseUnlock::LetterThresholdMs);
     assert(fastest.unlocks == 1);
     Input slow;
     slow.word(MorseUnlock::DashThresholdMs - 1, MorseUnlock::MaxHoldMs,
-              MorseUnlock::LetterGapMs - 1, MorseUnlock::ResetGapMs - 1);
+              MorseUnlock::LetterThresholdMs - 1, MorseUnlock::WordGapMs - 1);
     assert(slow.unlocks == 1);
+    Input relaxedLetters;
+    relaxedLetters.word(200, 600, 200, 1000);
+    assert(relaxedLetters.unlocks == 1); // Earlier one-second guidance remains usable.
     Input wrapped;
     wrapped.now = UINT32_MAX - 100;
     wrapped.word(); assert(wrapped.unlocks == 1);
@@ -105,7 +117,7 @@ void visibleRegisteredSymbols() {
     Input r;
     r.down(); r.expect("");
     assert(!r.release(MorseUnlock::MinHoldMs)); r.expect(".");
-    r.quiet(MorseUnlock::LetterGapMs - 1); r.expect(".");
+    r.quiet(MorseUnlock::LetterThresholdMs - 1); r.expect(".");
     r.quiet(1); r.expect(". ");
     r.quiet(100); r.expect(". "); // Add one separator, never repeated spaces.
     r.pulse(MorseUnlock::DashThresholdMs - 1, 50); r.expect(". .");
@@ -131,6 +143,39 @@ void visibleRegisteredSymbols() {
     full.word(); assert(full.unlocks == 1);
 }
 
+void standardWordSpacing() {
+    for (uint32_t start : {uint32_t(0), UINT32_MAX - 100}) {
+        Input r; r.now = start;
+        r.pulse(MorseUnlock::DotMs, MorseUnlock::SymbolGapMs);
+        r.pulse(MorseUnlock::DotMs, MorseUnlock::LetterGapMs);
+        r.expect(".. ");
+        r.quiet(MorseUnlock::WordGapMs - MorseUnlock::LetterGapMs - 1);
+        r.expect(".. ");
+        r.quiet(1); r.expect("..  ");
+        r.quiet(0); r.quiet(100); r.expect("..  ");
+        assert(r.recognizer.restartCount() == 0); // Word break is not idle reset.
+        r.pulse(600, 200); r.pulse(200, 600);
+        r.pulse(200, 200); r.pulse(200, 600);
+        r.pulse(600, 0);
+        assert(r.unlocks == 0); // "i nit" cannot pass as the single word "init".
+        r.expect("..  -. .. -");
+        r.quiet(MorseUnlock::ResetGapMs); r.expect("");
+        assert(r.recognizer.restartCount() == 1);
+        r.word(); assert(r.unlocks == 1);
+    }
+
+    // A sparse update may cross both boundaries at once. Append precisely two
+    // spaces and keep waiting for the unchanged idle reset deadline.
+    Input sparse;
+    sparse.pulse(200, 0); sparse.expect(".");
+    sparse.quiet(MorseUnlock::WordGapMs); sparse.expect(".  ");
+    sparse.quiet(MorseUnlock::ResetGapMs - MorseUnlock::WordGapMs - 1);
+    sparse.expect(".  ");
+    assert(sparse.recognizer.restartCount() == 0);
+    sparse.quiet(1); sparse.expect("");
+    assert(sparse.recognizer.restartCount() == 1);
+}
+
 void idleTimeoutAndImmediateRetry() {
     for (uint32_t late : {MorseUnlock::ResetGapMs, MorseUnlock::ResetGapMs + 1000}) {
         Input r;
@@ -144,7 +189,7 @@ void idleTimeoutAndImmediateRetry() {
         assert(r.pulse(650, 0)); assert(r.unlocks == 1);
     }
     Input boundary;
-    boundary.pulse(650, MorseUnlock::ResetGapMs - 1); boundary.expect("- ");
+    boundary.pulse(650, MorseUnlock::ResetGapMs - 1); boundary.expect("-  ");
     assert(boundary.recognizer.restartCount() == 0);
     boundary.quiet(1); boundary.expect("");
     assert(boundary.recognizer.restartCount() == 1);
@@ -156,7 +201,7 @@ void idleTimeoutAndImmediateRetry() {
 
     Input extended;
     extended.pulse(650, MorseUnlock::ResetGapMs - 1);
-    extended.pulse(150, MorseUnlock::ResetGapMs - 1); extended.expect("- . ");
+    extended.pulse(150, MorseUnlock::ResetGapMs - 1); extended.expect("-  .  ");
     assert(extended.recognizer.restartCount() == 0);
     extended.quiet(1); extended.expect("");
     assert(extended.recognizer.restartCount() == 1);
@@ -165,7 +210,7 @@ void idleTimeoutAndImmediateRetry() {
     held.pulse(650, MorseUnlock::ResetGapMs - 1);
     held.down();
     assert(!held.sample(10000, true, false));
-    assert(held.recognizer.restartCount() == 0); held.expect("- ");
+    assert(held.recognizer.restartCount() == 0); held.expect("-  ");
     held.quiet(0); held.quiet(MorseUnlock::ResetGapMs - 1);
     assert(held.recognizer.restartCount() == 0);
     held.quiet(1); held.expect("");
@@ -277,15 +322,15 @@ void exhaustiveTimingBoundaries() {
         inner.pulse(150, 150); inner.pulse(150, 800);
         inner.pulse(650, 0);
         assert(inner.unlocks == unsigned(gap >= MorseUnlock::MinSymbolGapMs &&
-                                         gap < MorseUnlock::LetterGapMs));
+                                         gap < MorseUnlock::LetterThresholdMs));
 
         Input letter;
         letter.pulse(150, 150); letter.pulse(150, gap);
         letter.pulse(650, 150); letter.pulse(150, 800);
         letter.pulse(150, 150); letter.pulse(150, 800);
         letter.pulse(650, 0);
-        assert(letter.unlocks == unsigned(gap >= MorseUnlock::LetterGapMs &&
-                                          gap < MorseUnlock::ResetGapMs));
+        assert(letter.unlocks == unsigned(gap >= MorseUnlock::LetterThresholdMs &&
+                                          gap < MorseUnlock::WordGapMs));
     }
 }
 
@@ -313,10 +358,11 @@ int main() {
     validWords();
     eagerFinalDashAndExactEarlierLetters();
     visibleRegisteredSymbols();
+    standardWordSpacing();
     idleTimeoutAndImmediateRetry();
     holdsNoiseAndAttemptLimit();
     ownershipAndCancellation();
     exhaustiveTimingBoundaries();
     exhaustiveSevenSymbolWords();
-    std::puts("Morse unlock: eager init, grouped symbols, 2.5-second retry, bounds, cancellation and wraparound passed");
+    std::puts("Morse unlock: standard 1/3/7-unit timing, tolerant thresholds, word spacing, eager init, 2.5-second retry, bounds, cancellation and wraparound passed");
 }

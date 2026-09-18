@@ -220,6 +220,8 @@ int main(int argc, char** argv) {
 
     int brightness = 0, orientation = -1, network = -1, setup = 0;
     int bookmarked = -1, resets = 0, after_dark_unlocks = 0;
+    bool vibrating = false;
+    unsigned vibration_starts = 0, vibration_stops = 0;
     badge::UiModel model;
     badge::UiCallbacks callbacks;
     callbacks.brightness = [&](int value) { brightness = value; };
@@ -233,6 +235,12 @@ int main(int argc, char** argv) {
         ++after_dark_unlocks;
         model.after_dark_unlocked = true;
         badge::ui_update(model);
+    };
+    callbacks.morse_pressed = [&](bool active) {
+        assert(active != vibrating); // Hardware writes are contact edges only.
+        vibrating = active;
+        if (active) ++vibration_starts;
+        else ++vibration_stops;
     };
     badge::ui_init(display, callbacks);
     model.clock_text = "12:34 PM";
@@ -273,8 +281,8 @@ int main(int argc, char** argv) {
     assert(!find_gif(lv_display_get_screen_active(display)));
     snapshot("after-dark-locked");
     assert_idle();
-    const auto code_pulse = [](bool dash, int gap_ticks = 7, int x = 234, int y = 270) {
-        touch(x, y, true, dash ? 30 : 8);
+    const auto code_pulse = [](bool dash, int gap_ticks = 10, int x = 234, int y = 270) {
+        touch(x, y, true, dash ? 30 : 10); // Nominal 200 ms dot / 600 ms dash.
         touch(x, y, false, gap_ticks);
     };
     const auto code_prefix = [&] {
@@ -291,6 +299,49 @@ int main(int argc, char** argv) {
         badge::ui_page(1); spin();
         badge::ui_page(-1); spin();
     };
+
+    // Haptics track a held code contact without repeated writes on each tick.
+    assert(!vibrating && vibration_starts == vibration_stops);
+    auto starts = vibration_starts;
+    touch(234, 270, true, 10);
+    assert(vibrating && vibration_starts == starts + 1);
+    spin(10);
+    assert(vibrating && vibration_starts == starts + 1);
+    touch(234, 270, false, 10);
+    assert(!vibrating && vibration_starts == vibration_stops);
+    restart_code_page();
+    // An overlong hold is bounded and cannot re-enable until a fresh contact.
+    touch(234, 270, true, 65);
+    assert(vibrating);
+    spin(10);
+    assert(!vibrating);
+    starts = vibration_starts;
+    spin(20);
+    assert(vibration_starts == starts);
+    touch(234, 270, false);
+    restart_code_page();
+    // Opening a modal or a timed reveal during a press must stop the motor.
+    touch(234, 270, true);
+    assert(vibrating);
+    badge::ui_show_setup("init-test-badge", "example1234"); spin();
+    assert(!vibrating);
+    touch(234, 270, false);
+    badge::ui_close_setup(false); spin();
+    touch(234, 270, true);
+    assert(vibrating);
+    model.after_dark_unlocked = true;
+    badge::ui_update(model); spin();
+    assert(!vibrating);
+    touch(234, 270, false);
+    model.after_dark_unlocked = false;
+    badge::ui_update(model); spin();
+    touch(234, 270, true);
+    assert(vibrating);
+    lv_display_set_rotation(display, LV_DISPLAY_ROTATION_180); spin();
+    assert(!vibrating);
+    touch(234, 270, false);
+    lv_display_set_rotation(display, LV_DISPLAY_ROTATION_0); spin();
+    restart_code_page();
 
     // Each completed contact draws the registered symbol immediately. A bad
     // prefix stays visible and keeps accepting input until the attendee pauses.
@@ -399,6 +450,7 @@ int main(int argc, char** argv) {
     code_pulse(false); code_pulse(false, 40);
     touch(234, 270, true);
     touch(246, 270, true);
+    assert(!vibrating); // Moving out of the gesture stops held feedback.
     touch(234, 270, true, 25);
     touch(234, 270, false, 40);
     code_suffix();
@@ -428,7 +480,9 @@ int main(int argc, char** argv) {
     // Returning through a pusher while a finger stays down requires release:
     // the new page cannot count the tail of that contact as the first dot.
     touch(234, 270, true);
+    assert(vibrating);
     badge::ui_button(false, 1); spin();
+    assert(!vibrating); // The old page's destructor shuts down feedback.
     badge::ui_button(false, -1); spin();
     touch(234, 270, true, 8);
     touch(234, 270, false, 7);
@@ -442,6 +496,7 @@ int main(int argc, char** argv) {
     touch(234, 270, true);
     lv_indev_wait_release(input);
     touch(234, 270, false, 40);
+    assert(!vibrating);
     code_suffix();
     assert(after_dark_unlocks == 0);
     restart_code_page();
@@ -472,14 +527,17 @@ int main(int argc, char** argv) {
 
     // Every part of the page accepts code, including heading, empty background,
     // prompt and footer. Children and chrome decoration cannot swallow taps.
-    code_pulse(false, 7, 234, 100); code_pulse(false, 40, 234, 140); // i
-    code_pulse(true, 7, 100, 300); code_pulse(false, 40, 234, 270); // n
-    code_pulse(false, 7, 234, 370); code_pulse(false, 40, 234, 432); // i
+    // Standard 200 ms symbols gaps and 600 ms letter gaps, across the page.
+    code_pulse(false, 10, 234, 100); code_pulse(false, 30, 234, 140); // i
+    code_pulse(true, 10, 100, 300); code_pulse(false, 30, 234, 270);  // n
+    code_pulse(false, 10, 234, 370); code_pulse(false, 30, 234, 432); // i
     // Decode once on the final dash release, without making a correct code
     // wait for either a letter pause or the failed-attempt idle deadline.
     touch(234, 270, true, 30);
     assert(after_dark_unlocks == 0);
+    assert(vibrating);
     touch(234, 270, false, 3);
+    assert(!vibrating);
     assert(after_dark_unlocks == 1 && model.after_dark_unlocked);
     assert(badge::ui_page_index() == 2 && badge::ui_page_count() == 6);
     assert(!find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
@@ -501,8 +559,11 @@ int main(int argc, char** argv) {
     assert(find_gif(lv_display_get_screen_active(display)) == celebration);
     assert(lv_gif_get_current_frame_index(celebration) > 5);
     snapshot("after-dark-revealed");
+    starts = vibration_starts;
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 1);
+    assert(!vibrating && vibration_starts == vibration_stops);
+    assert(vibration_starts == starts); // An unlocked invitation has no input buzz.
     spin(550); // One source loop finishes and releases its native decoder/timer.
     assert(!find_gif(lv_display_get_screen_active(display)));
     assert_idle();

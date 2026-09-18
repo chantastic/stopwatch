@@ -6,6 +6,7 @@
 #include "board_rotation.h"
 #include "board_touch.h"
 #include "board_flush.h"
+#include "board_vibration.h"
 #include "vendor/cst820/cst820.h"
 #include "vendor/rx8130/rx8130.h"
 
@@ -95,6 +96,15 @@ public:
 
 i2c_bus_handle_t i2cBus = nullptr;
 std::unique_ptr<M5IOE1> ioe;
+struct InputMotor {
+    bool setFrequency(uint16_t frequency) {
+        return ioe && ioe->setPwmFrequency(frequency) == M5IOE1_OK;
+    }
+    bool setDuty(uint8_t duty) {
+        return ioe && ioe->setPwmDuty(M5IOE1_PWM_CH1, duty, false, true) == M5IOE1_OK;
+    }
+} inputMotor;
+InputVibration inputVibration;
 std::unique_ptr<M5PM1> pmic;
 std::unique_ptr<StopWatchDisplay> gfx;
 std::unique_ptr<Cst820> sensor;
@@ -153,7 +163,7 @@ bool initPower() {
     ioe->setI2cSleepTime(0);
     ioe->setI2cSleepTime(0);
     // Clear retained motor PWM before setting output modes. Keep audio off.
-    ioe->setPwmDuty(0, 0, false, true);
+    inputVibration.init(inputMotor, millis());
     for (auto pin : {M5IOE1_PIN_9, M5IOE1_PIN_8, M5IOE1_PIN_10,
                      M5IOE1_PIN_4, M5IOE1_PIN_5, M5IOE1_PIN_1, M5IOE1_PIN_3}) {
         ioe->pinMode(pin, OUTPUT);
@@ -337,6 +347,7 @@ void poll() {
     if (!initialized) return;
     const uint32_t now = millis();
     pollTouch(now);
+    inputVibration.poll(touchSample.valid && touchSample.pressed, inputMotor, millis());
     buttonState.yellow = yellowButton.update(gpio_get_level(GPIO_NUM_2) == 0, now);
     buttonState.blue = blueButton.update(gpio_get_level(GPIO_NUM_1) == 0, now);
     pollImu(now);
@@ -344,6 +355,12 @@ void poll() {
 }
 uint32_t millis() { return uint32_t(esp_timer_get_time() / 1000); }
 const TouchSample& touch() { return touchSample; }
+void setInputVibration(bool pressed) {
+    if (!initialized) return;
+    inputVibration.set(pressed, touchSample.valid && touchSample.pressed, inputMotor, millis());
+}
+bool inputVibrationAvailable() { return initialized && inputVibration.available(); }
+bool inputVibrationActive() { return inputVibration.active(); }
 bool injectTouch(int x, int y, bool pressed) {
     if (!initialized || physicalPressed || (!pressed && !injectedActive) ||
         x < 0 || y < 0 || x >= width() || y >= height()) return false;

@@ -6,11 +6,15 @@
 // The invitation view feeds its native LVGL touch surface through the first
 // input; the optional second input is still mutually exclusive for the word.
 //
-// A tap is 50–349 ms, a dash is 350–1400 ms, symbols are separated by 50–599 ms,
-// and 600 ms quiet ends a letter. The exact final dash succeeds on release.
+// ITU-R M.1677-1 timings use a 200 ms unit here: dot/symbol gap 1 unit,
+// dash/letter gap 3 units, word gap 7 units. The standard defines ideal sending
+// times, not receive tolerance. Midpoint thresholds distinguish dot from dash
+// and symbol gap from letter gap; a full 7-unit gap separates words. The code
+// must be one word. The exact final dash succeeds on release.
 // A mismatch poisons recognition, but input() keeps the registered dots/dashes
-// visible, grouped by single spaces. After 2500 ms with both inputs released,
-// the attempt clears and restartCount() advances so the view can show feedback.
+// visible, with one space between letters and two between words. After 2500 ms
+// with both inputs released, the attempt clears and restartCount() advances so
+// the view can show feedback.
 // Holds never time out as idle; the 15000 ms whole-attempt bound only poisons
 // recognition. A correct-looking suffix cannot unlock a malformed attempt.
 //
@@ -19,16 +23,24 @@
 // allocation, or framework dependencies. Reset/disable it around input modals.
 class MorseUnlock {
  public:
+    static constexpr uint32_t UnitMs = 200;
+    static constexpr uint32_t DotMs = UnitMs;
+    static constexpr uint32_t DashMs = 3 * UnitMs;
+    static constexpr uint32_t SymbolGapMs = UnitMs;
+    static constexpr uint32_t LetterGapMs = 3 * UnitMs;
+    static constexpr uint32_t WordGapMs = 7 * UnitMs;
+
+    // Forgiving human-input limits, distinct from the ideal Morse timings.
     static constexpr uint32_t MinHoldMs = 50;
-    static constexpr uint32_t DashThresholdMs = 350;
-    static constexpr uint32_t MaxHoldMs = 1400;
+    static constexpr uint32_t DashThresholdMs = (DotMs + DashMs) / 2;
+    static constexpr uint32_t MaxHoldMs = WordGapMs;
     static constexpr uint32_t MinSymbolGapMs = 50;
-    static constexpr uint32_t LetterGapMs = 600;
+    static constexpr uint32_t LetterThresholdMs = (SymbolGapMs + LetterGapMs) / 2;
     static constexpr uint32_t ResetGapMs = 2500;
     static constexpr uint32_t MaxAttemptMs = 15000;
     static constexpr uint8_t InputCapacity = 32;
 
-    // Includes a trailing space as soon as the most recent letter's gap ends.
+    // Includes trailing spaces as soon as a letter/word gap is recognized.
     const char* input() const { return input_; }
     uint32_t restartCount() const { return restartCount_; }
 
@@ -79,7 +91,7 @@ class MorseUnlock {
             }
             const char symbol = duration < DashThresholdMs ? '.' : '-';
             append(symbol);
-            letterOpen_ = true;
+            letterOpen_ = wordOpen_ = true;
             if (!rejected_) {
                 const char* expected = letter(letterIndex_);
                 if (!expected[symbolIndex_] || expected[symbolIndex_] != symbol) {
@@ -96,7 +108,7 @@ class MorseUnlock {
         }
 
         const uint32_t gap = elapsed(now, releasedAt_);
-        if (letterOpen_ && gap >= LetterGapMs) {
+        if (letterOpen_ && gap >= LetterThresholdMs) {
             append(' ');
             letterOpen_ = false;
             if (!rejected_) {
@@ -104,6 +116,11 @@ class MorseUnlock {
                 else ++letterIndex_;
                 symbolIndex_ = 0;
             }
+        }
+        if (wordOpen_ && gap >= WordGapMs) {
+            append(' ');
+            wordOpen_ = false;
+            rejected_ = true; // A word boundary cannot occur inside "init".
         }
         if (held) {
             if (gap < MinSymbolGapMs) rejected_ = true;
@@ -136,7 +153,7 @@ class MorseUnlock {
     }
     void clearAttempt() {
         pusher_ = letterIndex_ = symbolIndex_ = inputLength_ = 0;
-        pressed_ = rejected_ = letterOpen_ = false;
+        pressed_ = rejected_ = letterOpen_ = wordOpen_ = false;
         input_[0] = '\0';
     }
 
@@ -145,5 +162,5 @@ class MorseUnlock {
     char input_[InputCapacity + 1] = {};
     uint8_t pusher_ = 0, letterIndex_ = 0, symbolIndex_ = 0, inputLength_ = 0;
     bool pressed_ = false, waitingForRelease_ = false;
-    bool rejected_ = false, letterOpen_ = false;
+    bool rejected_ = false, letterOpen_ = false, wordOpen_ = false;
 };
