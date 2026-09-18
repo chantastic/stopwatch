@@ -78,6 +78,10 @@
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation
   and pushers never enter Morse. A successful code plays the existing intro GIF
   once with `You're` → `Invited` → `To`, then reveals the invitation heading.
+  Show registered dots/dashes with spaced letter groups after 600 ms quiet.
+  Accept the correct final dash on release. An incorrect/incomplete attempt
+  restarts after 2.5 seconds released, with a brief native shake then fade;
+  the next press interrupts feedback immediately and starts a fresh attempt.
   Dragging more than 10 pixels, a cancelled press, navigation, modals or rotation
   cancel code entry. Long holds on this surface are Morse dashes, not ordinary
   taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,

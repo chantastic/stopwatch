@@ -23,8 +23,11 @@ native schedule/social scrolling; dynamic profile and
 avatar/company updates, social-only profiles and configured faces without chrome; QR expansion; setup return paths; and Touch test lifecycle.
 They do not validate the physical sensor, display transport, or orientation HAL.
 The touch-code view uses the production `MorseUnlock` timings: dots 50–349 ms,
-dashes 350–1400 ms, symbol gaps 50–599 ms, letter pauses 600–2999 ms, a three-second
-reset and a 15-second attempt bound. Main owns clock policy and NVS persistence;
+dashes 350–1400 ms, symbol gaps 50–599 ms, letter pauses 600–2499 ms, a 2.5-second
+released-idle reset and a 15-second attempt bound. Correct input completes on the
+final dash release. Native dot/dash groups, letter spacing, shake/fade feedback,
+immediate retry during that animation and lifecycle cleanup are checked too.
+Main owns clock policy and NVS persistence;
 the UI fixture observes its callback without writing a device unlock.
 
 Optional review images (PPM, outside Git):

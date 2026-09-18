@@ -118,6 +118,37 @@ lv_obj_t* find_gif(lv_obj_t* object) {
     }
     return nullptr;
 }
+lv_obj_t* find_morse_feedback(lv_obj_t* object) {
+    if (lv_obj_get_width(object) == 336 && lv_obj_get_height(object) == 86) return object;
+    for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
+        if (auto* found = find_morse_feedback(lv_obj_get_child(object, i))) return found;
+    }
+    return nullptr;
+}
+std::vector<lv_obj_t*> morse_symbols(lv_obj_t* object) {
+    std::vector<lv_obj_t*> symbols;
+    if (lv_obj_has_flag(object, LV_OBJ_FLAG_HIDDEN)) return symbols;
+    // Registered input is drawn as shapes, never translated letter labels.
+    assert(!lv_obj_check_type(object, &lv_label_class));
+    if (lv_obj_get_child_count(object) == 0 &&
+        lv_obj_get_style_bg_opa(object, LV_PART_MAIN) == LV_OPA_COVER &&
+        lv_obj_get_height(object) == 8 &&
+        (lv_obj_get_width(object) == 8 || lv_obj_get_width(object) == 24)) {
+        symbols.push_back(object);
+    }
+    for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
+        auto children = morse_symbols(lv_obj_get_child(object, i));
+        symbols.insert(symbols.end(), children.begin(), children.end());
+    }
+    return symbols;
+}
+int horizontal_gap(lv_obj_t* left, lv_obj_t* right) {
+    lv_area_t left_area, right_area;
+    lv_obj_get_coords(left, &left_area);
+    lv_obj_get_coords(right, &right_area);
+    assert(left_area.y1 == right_area.y1);
+    return right_area.x1 - left_area.x2 - 1;
+}
 void assert_inside(lv_obj_t* child, lv_obj_t* parent) {
     lv_area_t child_area, parent_area;
     lv_obj_get_coords(child, &child_area);
@@ -261,6 +292,108 @@ int main(int argc, char** argv) {
         badge::ui_page(-1); spin();
     };
 
+    // Each completed contact draws the registered symbol immediately. A bad
+    // prefix stays visible and keeps accepting input until the attendee pauses.
+    auto feedback = [&] {
+        auto* object = find_morse_feedback(lv_display_get_screen_active(display));
+        assert(object);
+        return object;
+    };
+    assert(lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+    code_pulse(false);
+    auto symbols = morse_symbols(feedback());
+    assert(symbols.size() == 1 && lv_obj_get_width(symbols[0]) == 8);
+    assert(lv_obj_get_style_radius(symbols[0], LV_PART_MAIN) == LV_RADIUS_CIRCLE);
+    assert(lit_pixels(66, 100, 402, 186) > 10);
+    lv_area_t first_dot_area;
+    lv_obj_get_coords(symbols[0], &first_dot_area);
+    // The visualization itself remains part of the same touch target.
+    code_pulse(false, 7, first_dot_area.x1 + 3, first_dot_area.y1 + 3);
+    symbols = morse_symbols(feedback());
+    assert(symbols.size() == 2 && horizontal_gap(symbols[0], symbols[1]) == 8);
+    code_pulse(false); // "..." is wrong, but all three taps must be shown.
+    assert(morse_symbols(feedback()).size() == 3 && after_dark_unlocks == 0);
+    spin(30); // A letter pause introduces a visibly larger next-group gap.
+    code_pulse(true);
+    symbols = morse_symbols(feedback());
+    assert(symbols.size() == 4 && lv_obj_get_width(symbols[3]) == 24);
+    assert(horizontal_gap(symbols[2], symbols[3]) == 24);
+    code_pulse(false);
+    assert(morse_symbols(feedback()).size() == 5);
+    snapshot("after-dark-registered-symbols");
+    // snapshot advances 120 ms; leave another 2.08 seconds after the pulse's
+    // release gap, still safely below the 2.5-second idle deadline.
+    spin(104);
+    assert(!lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+    assert(lv_obj_get_style_translate_x(feedback(), LV_PART_MAIN) == 0);
+    assert(lv_obj_get_style_opa(feedback(), LV_PART_MAIN) == LV_OPA_COVER);
+    assert(morse_symbols(feedback()).size() == 5 && after_dark_unlocks == 0);
+    bool saw_shake = false, saw_fade = false;
+    for (int i = 0; i < 40; ++i) {
+        spin(1);
+        saw_shake |= lv_obj_get_style_translate_x(feedback(), LV_PART_MAIN) != 0;
+        const auto opacity = lv_obj_get_style_opa(feedback(), LV_PART_MAIN);
+        saw_fade |= opacity > LV_OPA_TRANSP && opacity < LV_OPA_COVER;
+    }
+    assert(saw_shake && saw_fade);
+    assert(lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+    assert(morse_symbols(feedback()).empty());
+    assert_idle();
+
+    // A fresh press during either the shake or fade starts its next attempt
+    // immediately. The old animation cannot later erase the newly entered dot.
+    for (const int phase_ticks : {120, 132}) {
+        code_pulse(true);
+        spin(phase_ticks);
+        assert(!lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+        if (phase_ticks == 132)
+            assert(lv_obj_get_style_opa(feedback(), LV_PART_MAIN) < LV_OPA_COVER);
+        touch(234, 270, true, 8);
+        assert(lv_obj_get_style_translate_x(feedback(), LV_PART_MAIN) == 0);
+        assert(lv_obj_get_style_opa(feedback(), LV_PART_MAIN) == LV_OPA_COVER);
+        touch(234, 270, false, 20);
+        symbols = morse_symbols(feedback());
+        assert(symbols.size() == 1 && lv_obj_get_width(symbols[0]) == 8);
+        assert(after_dark_unlocks == 0);
+        restart_code_page();
+        assert(lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+    }
+
+    // A long incorrect letter wraps inside the reserved input area rather
+    // than disappearing past the round screen or covering the prompt.
+    for (int i = 0; i < 25; ++i) code_pulse(false);
+    symbols = morse_symbols(feedback());
+    assert(symbols.size() == 25);
+    bool wrapped = false;
+    lv_area_t first_symbol;
+    lv_obj_get_coords(symbols.front(), &first_symbol);
+    for (auto* symbol : symbols) {
+        lv_area_t area, container_area;
+        lv_obj_get_coords(symbol, &area);
+        lv_obj_get_coords(feedback(), &container_area);
+        if (area.x1 < container_area.x1 || area.x2 > container_area.x2 ||
+            area.y1 < container_area.y1 || area.y2 > container_area.y2)
+            std::fprintf(stderr, "Morse mark outside input area: mark %d,%d..%d,%d container %d,%d..%d,%d\n",
+                area.x1, area.y1, area.x2, area.y2, container_area.x1, container_area.y1, container_area.x2, container_area.y2);
+        assert_inside(symbol, feedback());
+        wrapped |= area.y1 != first_symbol.y1;
+    }
+    assert(wrapped && after_dark_unlocks == 0);
+    snapshot("after-dark-wrapped-input");
+    restart_code_page();
+
+    // Feedback callbacks must not outlive the view when navigation or setup
+    // destroys it. Returning always starts with an empty registered sequence.
+    code_pulse(true); spin(120);
+    badge::ui_page(1); spin(30);
+    badge::ui_page(-1); spin();
+    assert(lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+    code_pulse(true); spin(120);
+    badge::ui_show_setup("init-test-badge", "example1234"); spin(30);
+    badge::ui_close_setup(false); spin();
+    assert(badge::ui_page_index() == 2);
+    assert(lv_obj_has_flag(feedback(), LV_OBJ_FLAG_HIDDEN));
+
     // Movement cancels the whole attempt even if the finger returns to its
     // start point before release, so a completed suffix cannot unlock it.
     code_pulse(false); code_pulse(false, 40);
@@ -342,12 +475,11 @@ int main(int argc, char** argv) {
     code_pulse(false, 7, 234, 100); code_pulse(false, 40, 234, 140); // i
     code_pulse(true, 7, 100, 300); code_pulse(false, 40, 234, 270); // n
     code_pulse(false, 7, 234, 370); code_pulse(false, 40, 234, 432); // i
-    // Decode once, only after releasing the final dash and its letter pause.
+    // Decode once on the final dash release, without making a correct code
+    // wait for either a letter pause or the failed-attempt idle deadline.
     touch(234, 270, true, 30);
     assert(after_dark_unlocks == 0);
-    touch(234, 270, false, 28);
-    assert(after_dark_unlocks == 0);
-    spin(6);
+    touch(234, 270, false, 3);
     assert(after_dark_unlocks == 1 && model.after_dark_unlocked);
     assert(badge::ui_page_index() == 2 && badge::ui_page_count() == 6);
     assert(!find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));

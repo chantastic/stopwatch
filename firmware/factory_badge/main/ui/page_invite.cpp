@@ -1,6 +1,7 @@
 #include "widgets.h"
 #include "intro_loop.h"
 #include "../morse_unlock.h"
+#include <algorithm>
 #include <cstdlib>
 
 namespace badge::ui {
@@ -14,6 +15,13 @@ public:
         lv_obj_set_style_bg_color(root_, panel(), LV_STATE_PRESSED);
         prompt_ = label(root_, "", 80, 216, 308, &font_sans_24, white());
         lv_label_set_long_mode(prompt_, LV_LABEL_LONG_WRAP);
+        input_display_ = container(root_, 66, 100, 336, 86);
+        lv_obj_remove_flag(input_display_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_flex_flow(input_display_, LV_FLEX_FLOW_ROW_WRAP);
+        lv_obj_set_flex_align(input_display_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_column(input_display_, 24, 0);
+        lv_obj_set_style_pad_row(input_display_, 10, 0);
+        set_hidden(input_display_, true);
         footer_ = label(root_, "", 64, 367, 340, &font_mono_semibold_12, muted());
         // Ordinary on_tap rejects long presses. This surface instead feeds
         // native press durations to the existing bounded Morse recognizer.
@@ -40,13 +48,13 @@ public:
         }
         update();
     }
-    ~InvitePage() override { lv_anim_delete(this, reveal_word); }
+    ~InvitePage() override { lv_anim_delete(this, nullptr); }
 
     void cancel_input() override { cancel(); }
     void update() override {
         const bool locked = !context_.model.after_dark_unlocked;
         if (!locked || context_.setup || context_.touch_test || context_.reset) cancel();
-        else sample(); // Also observes the quiet pause after the final release.
+        else sample(); // Observe letter spacing and the idle restart deadline.
         const bool revealed = context_.model.after_dark_unlocked;
         if (!revealing())
             set_text(prompt_, revealed ? "You're invited" : "tap the code to reveal a secret invitation");
@@ -75,7 +83,81 @@ private:
         held_ = false;
         armed_ = false;
         morse_.reset();
+        clear_feedback();
         lv_obj_remove_state(root_, LV_STATE_PRESSED);
+    }
+    void render_input(const char* text) {
+        if (displayed_input_ == text) return;
+        displayed_input_ = text;
+        lv_obj_clean(input_display_);
+        set_hidden(input_display_, displayed_input_.empty());
+        if (displayed_input_.empty()) return;
+        // LVGL lays out letter groups and wraps long incorrect attempts. These
+        // visual-only children let contacts pass through to the page surface.
+        lv_obj_t* group = nullptr;
+        int group_width = 0;
+        for (char symbol : displayed_input_) {
+            if (!group || symbol == ' ') {
+                group = container(input_display_, 0, 0, 24, LV_SIZE_CONTENT);
+                group_width = 0;
+                lv_obj_remove_flag(group, LV_OBJ_FLAG_CLICKABLE);
+                lv_obj_set_style_min_height(group, 8, 0);
+                lv_obj_set_flex_flow(group, LV_FLEX_FLOW_ROW_WRAP);
+                lv_obj_set_flex_align(group, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+                lv_obj_set_style_pad_column(group, 8, 0);
+                lv_obj_set_style_pad_row(group, 10, 0);
+                if (symbol == ' ') {
+                    // Reserve the next letter's space as soon as the pause
+                    // registers, before its first symbol is released.
+                    lv_obj_set_style_min_width(group, 24, 0);
+                    continue;
+                }
+            }
+            auto* mark = container(group, 0, 0, symbol == '.' ? 8 : 24, 8);
+            lv_obj_remove_flag(mark, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_style_bg_color(mark, white(), 0);
+            lv_obj_set_style_bg_opa(mark, LV_OPA_COVER, 0);
+            lv_obj_set_style_radius(mark, symbol == '.' ? LV_RADIUS_CIRCLE : 0, 0);
+            group_width += (group_width ? 8 : 0) + (symbol == '.' ? 8 : 24);
+            // Flex needs a bounded width to wrap; content-sized width would
+            // expand beyond the display even with a max-width style.
+            lv_obj_set_width(group, std::min(group_width, 336));
+        }
+    }
+    void clear_feedback() {
+        if (!restarting_ && displayed_input_.empty()) return;
+        lv_anim_delete(this, restart_feedback);
+        restarting_ = false;
+        lv_obj_set_style_translate_x(input_display_, 0, 0);
+        lv_obj_set_style_opa(input_display_, LV_OPA_COVER, 0);
+        render_input("");
+    }
+    void restart_feedback_animation() {
+        restarting_ = true;
+        lv_anim_t feedback;
+        lv_anim_init(&feedback);
+        lv_anim_set_var(&feedback, this);
+        lv_anim_set_exec_cb(&feedback, restart_feedback);
+        lv_anim_set_values(&feedback, 0, 380);
+        lv_anim_set_duration(&feedback, 380);
+        lv_anim_start(&feedback);
+    }
+    static void restart_feedback(void* view, int32_t progress) {
+        auto& self = *static_cast<InvitePage*>(view);
+        // One native animation shakes for 220 ms, then fades for 160 ms.
+        constexpr int offsets[] = {0, -8, 8, -6, 6, 0};
+        int x = 0;
+        if (progress < 220) {
+            const int step = progress / 44;
+            x = offsets[step] + (offsets[step + 1] - offsets[step]) * (progress % 44) / 44;
+        }
+        lv_obj_set_style_translate_x(self.input_display_, x, 0);
+        lv_obj_set_style_opa(self.input_display_, progress <= 220 ? int(LV_OPA_COVER) : (380 - progress) * 255 / 160, 0);
+        if (progress == 380) {
+            self.restarting_ = false;
+            self.render_input("");
+            lv_obj_set_style_opa(self.input_display_, LV_OPA_COVER, 0);
+        }
     }
     void celebrate() {
         celebration_ = lv_gif_create(root_);
@@ -117,16 +199,27 @@ private:
     }
     void sample() {
         if (submitted_ || context_.model.after_dark_unlocked) return;
-        if (!morse_.update(held_, false, lv_tick_get())) return;
-        submitted_ = true;
-        auto action = context_.callbacks.unlock_after_dark;
-        if (action) action();
+        const bool accepted = morse_.update(held_, false, lv_tick_get());
+        if (morse_.restartCount() != restart_count_) {
+            restart_count_ = morse_.restartCount();
+            if (!held_ && !displayed_input_.empty()) restart_feedback_animation();
+            else clear_feedback();
+        }
+        if (accepted) {
+            clear_feedback();
+            submitted_ = true;
+            auto action = context_.callbacks.unlock_after_dark;
+            if (action) action();
+        } else if (!restarting_) render_input(morse_.input());
     }
     void contact(lv_event_t* event) {
         if (context_.model.after_dark_unlocked || submitted_) return;
         const auto code = lv_event_get_code(event);
         auto* input = lv_indev_active();
         if (code == LV_EVENT_PRESSED && input) {
+            // Feedback never locks input: the first new press immediately
+            // dismisses the old attempt and starts recording the next one.
+            if (restarting_) clear_feedback();
             lv_indev_get_point(input, &start_);
             held_ = armed_ = true;
             sample();
@@ -143,11 +236,13 @@ private:
         // LONG_PRESSED is intentionally accepted: holds are Morse dashes.
     }
     lv_obj_t *title_ = nullptr, *subtitle_ = nullptr, *prompt_ = nullptr,
-             *footer_ = nullptr, *celebration_ = nullptr;
+             *footer_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
     MorseUnlock morse_;
+    std::string displayed_input_;
     lv_point_t start_{};
+    uint32_t restart_count_ = 0;
     int displayed_state_ = -1, reveal_stage_ = 3;
-    bool held_ = false, armed_ = false, submitted_ = false, celebration_done_ = false;
+    bool held_ = false, armed_ = false, submitted_ = false, celebration_done_ = false, restarting_ = false;
 };
 std::unique_ptr<PageView> make_after_dark(Context& c, lv_obj_t* p) { return std::make_unique<InvitePage>(c, p); }
 } // namespace badge::ui

@@ -43,6 +43,12 @@ the earlier hidden-page/physical-pusher interaction without changing saved unloc
 Successful touch code uses the existing native intro GIF once behind a native
 LVGL word sequence (`You're`, `Invited`, `To`), then reveals the invitation heading.
 Page lifetime owns the decoder and animations; no second player is introduced.
+Registered dots/dashes use native LVGL objects with flex letter groups and
+wrapping. A 600 ms gap spaces letters; the final correct dash submits on release.
+The recognizer reports a 2.5-second released-idle reset, and the view shakes for
+220 ms then fades for 160 ms using a native animation. A new press cancels that
+animation without discarding the new contact; page destruction cancels both
+feedback and reveal callbacks.
 
 ## Factory baseline and deliberate adaptations
 

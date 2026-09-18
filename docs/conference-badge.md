@@ -68,10 +68,14 @@ replaces the small square target with the whole page and a prominent prompt:
 normal actions. The rest of the locked page accepts `init` in Morse:
 `.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Use short taps around
 150 ms, holds around 600 ms, short pauses within letters, and roughly one second
-between letters. Wait for the pause after the final hold; the same page reveals
-its invitation content. After an incorrect attempt, leave the surface untouched
-for three seconds before retrying. Physical pushers retain their normal paging
-and setup behavior and cannot enter the code.
+between letters. Each registered symbol appears as a dot or dash above the
+prompt; after 600 ms quiet, a wider gap reserves the next letter's space. Only
+the entered symbols are shown, never decoded letters or the answer. The correct
+final hold reveals the invitation immediately on release, without a final pause.
+An incorrect or incomplete attempt ends after 2.5 seconds with no contact. Its
+visualization shakes for 220 ms and fades for 160 ms, then clears. The next press
+can interrupt this feedback immediately and starts a fresh attempt. Physical
+pushers retain their normal paging and setup behavior and cannot enter the code.
 
 On successful code entry, the exact front-page GIF plays once behind a native
 LVGL word sequence: `You're`, `Invited`, `To` for about 700 ms each. The event
@@ -81,8 +85,13 @@ leaves; an already-unlocked page and timed reveals do not replay the code-succes
 sequence. The static invitation remains until its real URL is supplied.
 
 The recognizer accepts dots of 50–349 ms and dashes of 350–1400 ms. Symbol gaps
-are 50–599 ms; letter pauses are 600–2999 ms; a whole attempt must finish within
-15 seconds. A drag more than 10 pixels on either axis, lost press, navigation,
+are 50–599 ms; letter pauses are 600–2499 ms; a whole attempt must finish within
+15 seconds. Incorrect prefixes keep displaying later registered symbols and
+cannot accept a correct-looking suffix before the inactivity reset. Input is
+bounded to 32 ASCII symbols/spaces; overflow cannot unlock. Each release renews
+the inactivity deadline, and a held contact never triggers the idle restart.
+Native LVGL flex layout spaces/wraps the marks and owns the feedback animation.
+A drag more than 10 pixels on either axis, lost press, navigation,
 setup, Touch test, reset or rotation discards progress. A contact already held
 when entering the page must lift before it can start a new code. Long holds are
 accepted here rather than cancelled by the ordinary completed-tap helper.
@@ -421,6 +430,19 @@ Hardware verification results and limits belong in the dated report below;
 compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
+
+September 18 Morse feedback: sanitized portable tests passed timing boundaries,
+all 8,192 seven-symbol/grouping combinations, eager final release, continued
+incorrect-input display, idle reset, overflow and wraparound. The native LVGL
+sanitizer suite passed actual mark rendering/spacing, mark-area touch pass-through,
+shake/fade, retry during either phase, wrapped input, cancellation and cleanup.
+The build and guarded flash passed. USB-simulated incorrect input appeared on the
+development badge and cleared after its timeout; no successful code was entered.
+Saved indicators/unlock were preserved, the original page restored, no preference
+writes occurred, and clock/storage/offline-radio checks passed. These simulated
+contacts do not establish physical fingertip timing or alignment. Application
+SHA-256: `032c4d91eb3dedefd5119d7e5129bc465579358549d8102c4668e7eed5dfd941`.
+Private evidence: `.build/morse-feedback/`.
 
 The September 17 schedule-centering follow-up uses LVGL's native center snap at
 display Y=233, matching the arrows. Sanitized native UI tests passed for all nine

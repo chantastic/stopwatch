@@ -13,6 +13,12 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 18 Morse feedback: display the entered dots/dashes with a wider
+  letter gap after 600 ms quiet. Accept correct `init` on final dash release.
+  After 2.5 seconds released, shake then quickly fade an incomplete/wrong attempt
+  and restart; a new press interrupts feedback immediately. Use native LVGL
+  layout/animation and keep code recognition independent of the wall clock.
+
 - September 17 reset correction: confirmed Settings → Reset badge also clears
   the After Dark unlock and its pending save, so the code can be tried again.
   This supersedes the original choice to keep the unlock during reset. Keep the
