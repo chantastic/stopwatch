@@ -5,8 +5,9 @@
 
 namespace badge::ui {
 inline lv_color_t white() { return lv_color_hex(0xffffff); }
-inline lv_color_t muted() { return lv_color_hex(0x858585); }
-inline lv_color_t panel() { return lv_color_hex(0x151515); }
+inline lv_color_t cream() { return lv_color_hex(0xf5f2e8); }
+inline lv_color_t muted() { return lv_color_hex(0x808080); }
+inline lv_color_t panel() { return lv_color_hex(0x161616); }
 inline lv_color_t accent() { return lv_color_hex(0xa596ff); }
 
 lv_obj_t* container(lv_obj_t* parent, int x, int y, int width, int height);

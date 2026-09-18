@@ -9,7 +9,7 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
     lv_obj_remove_flag(root_, LV_OBJ_FLAG_CLICKABLE);
     brand(root_, 24);
     brand_ = lv_obj_get_child(root_, -1);
-    auto* left = button(root_, "", 14, 170, 54, 126, [] { ui_page(-1); });
+    auto* left = button(root_, "", 15, 170, 54, 126, [] { ui_page(-1); });
     auto* right = button(root_, "", 398, 170, 54, 126, [] { ui_page(1); });
     for (auto* arrow : {left, right}) {
         lv_obj_set_style_bg_opa(arrow, LV_OPA_TRANSP, 0);
@@ -23,7 +23,7 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
     }
     footer_ = label(root_, "", 114, 119, 240, &font_mono_12, muted());
     for (int i = 0; i < PageCount; ++i) {
-        dots_[i] = container(root_, 0, 432, 8, 8);
+        dots_[i] = container(root_, 0, 431, 8, 8);
         lv_obj_remove_flag(dots_[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_style_bg_opa(dots_[i], LV_OPA_COVER, 0);
     }
@@ -43,16 +43,17 @@ void Chrome::update() {
     if (page_ != context_.page || visible_count_ != count) {
         page_ = context_.page;
         visible_count_ = count;
-        int slot = 0;
-        const int start = (Width - ((count - 1) * 16 + 8)) / 2;
+        // Eight pixels between each square, including the wider active one.
+        int x = (Width - (count * 8 + 4 + (count - 1) * 8)) / 2;
         for (int i = 0; i < PageCount; ++i) {
             const bool visible = page_visible(i, model);
             set_hidden(dots_[i], !visible);
             if (!visible) continue;
             const bool active = i == page_;
-            lv_obj_set_pos(dots_[i], start + slot++ * 16 - (active ? 2 : 0), active ? 430 : 432);
+            lv_obj_set_pos(dots_[i], x, active ? 429 : 431);
+            x += (active ? 12 : 8) + 8;
             lv_obj_set_size(dots_[i], active ? 12 : 8, active ? 12 : 8);
-            lv_obj_set_style_bg_color(dots_[i], active ? white() : lv_color_hex(0x777777), 0);
+            lv_obj_set_style_bg_color(dots_[i], active ? white() : muted(), 0);
         }
     }
 }

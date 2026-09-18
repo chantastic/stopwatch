@@ -1,6 +1,7 @@
 #include "badge_ui.h"
 #include "schedule.h"
 #include "ui/design_fonts.h"
+#include "ui/design_assets.h"
 #include <mooncake.h>
 #include <cassert>
 #include <cstdio>
@@ -87,6 +88,13 @@ lv_obj_t* find_label(lv_obj_t* object, const char* text) {
     if (lv_obj_check_type(object, &lv_label_class) && !std::strcmp(lv_label_get_text(object), text)) return object;
     for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
         if (auto* found = find_label(lv_obj_get_child(object, i), text)) return found;
+    }
+    return nullptr;
+}
+lv_obj_t* find_image(lv_obj_t* object, const lv_image_dsc_t* source) {
+    if (lv_obj_check_type(object, &lv_image_class) && lv_image_get_src(object) == source) return object;
+    for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
+        if (auto* found = find_image(lv_obj_get_child(object, i), source)) return found;
     }
     return nullptr;
 }
@@ -367,6 +375,28 @@ int main(int argc, char** argv) {
     snapshot("schedule-current");
     lv_area_t current_area;
     lv_obj_get_coords(current, &current_area);
+    // The selected outline follows the stepped silhouette. A conventional
+    // inset rectangular border used to paint into all four black cutouts.
+    for (int y = 0; y < 10; ++y) for (int x = 0; x < 10; ++x) {
+        const uint16_t expected = x < 8 && y < 8 ? 0 : 0xffff;
+        for (int px : {current_area.x1 + x, current_area.x2 - x})
+            for (int py : {current_area.y1 + y, current_area.y2 - y})
+                assert(pixels[py * Width + px] == expected);
+    }
+    // The full bookmark notch must render below the short time header. Its
+    // former header parent clipped the bottom of the otherwise correct asset.
+    const auto& outline = badge::ui::supplied_bookmark_outline;
+    auto* outline_image = find_image(current, &outline);
+    assert(outline_image);
+    lv_area_t outline_area;
+    lv_obj_get_coords(outline_image, &outline_area);
+    int lower_outline_pixels = 0;
+    for (int y = 20; y < int(outline.header.h); ++y) for (int x = 0; x < int(outline.header.w); ++x) {
+        if (outline.data[y * outline.header.stride + x] != 255) continue;
+        ++lower_outline_pixels;
+        assert(pixels[(outline_area.y1 + y) * Width + outline_area.x1 + x] == 0xffff);
+    }
+    assert(lower_outline_pixels > 0);
     const int bookmark_y = current_area.y1 + 26;
     tap(340, bookmark_y);
     assert(bookmarked == 1);

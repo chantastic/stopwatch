@@ -11,15 +11,41 @@ The logo, arrow and bookmark PNGs are the user's isolated September 17, 2026 exp
 | `Vector (3).png` | `left.png` | 23 × 38 |
 | `Vector (1).png` | `right.png` | 23 × 38 |
 | `Frame 2147219405.png` | `bookmark.png` | 29 × 29 |
+| Bookmark region in `Group 2147219341.png` | `bookmark_outline.png` | 29 × 29 |
 | Empty avatar region in `Profile.png` | `empty_portrait.png` | 160 × 160 |
+| Fixed QR region in `Make it yours.png` | `hack_qr.png` | 222 × 222 |
 
 `python3 scripts/generate-design-assets.py` (Pillow) packages the original alpha
 planes into LVGL A8 descriptors, without resizing or tracing. The unselected
-bookmark is the one-pixel inner edge of that same supplied silhouette. These
-brand assets are separate from dynamic attendee photos. The source MP4 and
+bookmark uses its exact source export, not an eroded version of the filled mark.
+These brand assets are separate from dynamic attendee photos. The source MP4 and
 screen mockups are not copied into firmware; see `../intro-loop.md` for the
 source-derived animation and `../fonts/README.md` for licensed typography.
 
 The empty portrait mask is the exact monochrome region x=153, y=83, w=160,
 h=160 of the supplied Profile.png (no resampling). Its luminance becomes alpha
 over black. It contains no personal photo or identity.
+
+The outline bookmark is the region x=228, y=14, w=29, h=29 from
+`Group 2147219341.png`. Reversing its white-over-`#161616` composite with
+`alpha = round((channel - 22) * 255 / 233)` retains the exact edge coverage.
+Recompositing over the source card reconstructs every channel without error.
+
+The fixed Hack QR is the exact region x=122, y=138, w=222, h=222 of the supplied
+`Make it yours.png`, including its quiet zone and edge coverage. Its luminance
+becomes alpha over black, rendered with LVGL's ordinary image widget. The source
+and generated crop decode to `https://drop.workos.cloud/stopwatch`; a compile-time
+check prevents using this asset after the application destination changes.
+Setup and personal profile codes still use LVGL's dynamic QR widget. The sample
+QR in the invitation mockup is not an invitation and is not used there.
+
+To repeat the crop extraction before packaging:
+
+```sh
+python3 scripts/generate-design-assets.py --source-designs '/path/to/init() conf 2026'
+```
+
+The script verifies `Make it yours.png` SHA-256
+`8edb37c71befd7cf98c248c94e05b7770e3ff4edc95e20ef2c2ef09bb2a59ad5`
+and `Group 2147219341.png` SHA-256
+`5e0d5dc6b7e9ec9c684229e6102ad4c63b50f4b9f3361f8d9cec4ac8a1cfe2dd`.

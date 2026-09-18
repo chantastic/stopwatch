@@ -20,7 +20,7 @@ hardware, rotate touch coordinates, access storage, or start network workers.
   Reset uses a fresh release tap, blocks navigation while working, and displays
   profile failures separately from partial preference failures. Main and the
   existing service worker own all persistence.
-- `design_assets.*`, `assets/`: original supplied brand alpha masks, without resampling.
+- `design_assets.*`, `assets/`: original supplied brand alpha masks and verified fixed Hack QR, without resampling. Setup/social QR contents remain dynamic.
 - `font_*.c`, `fonts/`: licensed native LVGL typography and pinned regeneration.
 - `intro_loop.*`: supplied motion clip converted for LVGL’s GIF widget, scoped to init().
   Attendee photos remain dynamic.
@@ -39,3 +39,7 @@ Static pages have no periodic full redraw. Animation uses LVGL animations, and
 scrolling uses LVGL's regular invalidation. The headless checks in
 `tests/factory-ui` exercise production views, real input events, partial rendering
 and idle behavior without a physical board.
+
+The latest [page audit](../../../../docs/pixel-audit-2026-09-17.md) records source
+geometry, pixel regressions, device verification and the remaining font/color
+rendering limits.

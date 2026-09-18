@@ -6,8 +6,8 @@
 
 namespace badge::ui {
 namespace {
-constexpr int RowWidth = 272;
-constexpr int ContentWidth = RowWidth - 28; // Padding and a reserved two-pixel border.
+constexpr int RowWidth = 273;
+constexpr int ContentWidth = RowWidth - 32; // Fourteen-pixel padding plus the reserved border.
 
 lv_obj_t* wrapped_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color) {
     auto* text_object = label(parent, text, 0, 0, ContentWidth, font, color);
@@ -46,17 +46,22 @@ void draw_notches(lv_event_t* event) {
     if (row.state != badge_schedule::State::OnNow) return;
     shape.bg_color = white();
     for (int side = 0; side < 2; ++side) {
-        const int x = side ? bounds.x2 - 7 : bounds.x1;
-        const int vertical_x = side ? x : x + 6;
-        rect(vertical_x, bounds.y1, 2, 8);
-        rect(x, bounds.y1 + 6, 8, 2);
-        rect(vertical_x, bounds.y2 - 7, 2, 8);
-        rect(x, bounds.y2 - 7, 8, 2);
+        // The two-pixel outline follows the inside of the stepped silhouette;
+        // none of its pixels may enter the transparent eight-pixel corners.
+        const int x = side ? bounds.x2 - 9 : bounds.x1;
+        const int vertical_x = side ? x : x + 8;
+        rect(vertical_x, bounds.y1, 2, 10);
+        rect(x, bounds.y1 + 8, 10, 2);
+        rect(vertical_x, bounds.y2 - 9, 2, 10);
+        rect(x, bounds.y2 - 9, 10, 2);
     }
 }
 
 lv_obj_t* bookmark(lv_obj_t* parent, std::function<void()> action) {
-    auto* target = container(parent, ContentWidth - 36, -8, 40, 40);
+    // Overlay the card rather than the short time header: the full bookmark
+    // silhouette extends below that line and must remain unclipped.
+    auto* target = container(parent, ContentWidth - 35, -6, 40, 40);
+    lv_obj_add_flag(target, LV_OBJ_FLAG_IGNORE_LAYOUT);
     lv_obj_set_ext_click_area(target, 0);
     on_tap(target, std::move(action));
     auto* icon = lv_image_create(target);
@@ -72,7 +77,7 @@ lv_obj_t* bookmark(lv_obj_t* parent, std::function<void()> action) {
 class SchedulePage final : public PageView {
 public:
     SchedulePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        label(root_, "Schedule", 84, 52, 300, &font_sans_24);
+        label(root_, "Schedule", 84, 52, 300, &font_sans_24, cream());
         subtitle_ = label(root_, "", 64, 87, 340, &font_mono_semibold_12, muted());
         list_ = container(root_, 98, 126, RowWidth, 254);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
@@ -89,7 +94,10 @@ public:
             lv_obj_set_height(row.box, LV_SIZE_CONTENT);
             lv_obj_set_flex_flow(row.box, LV_FLEX_FLOW_COLUMN);
             lv_obj_set_style_pad_all(row.box, 12, 0);
-            lv_obj_set_style_pad_row(row.box, 8, 0);
+            lv_obj_set_style_pad_left(row.box, 14, 0);
+            lv_obj_set_style_pad_right(row.box, 14, 0);
+            lv_obj_set_style_pad_bottom(row.box, 14, 0);
+            lv_obj_set_style_pad_row(row.box, 0, 0);
             lv_obj_set_style_bg_opa(row.box, LV_OPA_COVER, 0);
             lv_obj_set_style_radius(row.box, 0, 0);
             // Time and bookmark changes never change row geometry or discard
@@ -97,19 +105,22 @@ public:
             lv_obj_set_style_border_width(row.box, 2, 0);
             lv_obj_set_style_border_color(row.box, white(), 0);
             lv_obj_add_event_cb(row.box, draw_notches, LV_EVENT_DRAW_MAIN_END, &row);
-            auto* header = container(row.box, 0, 0, ContentWidth, 18);
-            lv_obj_add_flag(header, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+            auto* header = container(row.box, 0, 0, ContentWidth, 16);
             auto* time = label(header, item.time, 0, 0, 110, &font_mono_12, white());
             lv_obj_set_style_text_align(time, LV_TEXT_ALIGN_LEFT, 0);
             row.now = label(header, "", 112, 0, 82, &font_mono_12, white());
             lv_obj_set_style_text_align(row.now, LV_TEXT_ALIGN_RIGHT, 0);
-            row.bookmark_icon = bookmark(header, [this, i] {
+            auto* title = wrapped_label(row.box, item.title, &font_sans_20, white());
+            lv_obj_set_style_margin_top(title, 1, 0);
+            if (item.detail && item.detail[0]) {
+                auto* detail = wrapped_label(row.box, item.detail, &font_mono_12, muted());
+                lv_obj_set_style_margin_top(detail, 13, 0);
+            }
+            row.bookmark_icon = bookmark(row.box, [this, i] {
                 context_.model.schedule_bookmarks ^= uint16_t(1) << i;
                 if (context_.callbacks.bookmark) context_.callbacks.bookmark(int(i));
                 update_bookmarks();
             });
-            wrapped_label(row.box, item.title, &font_sans_20, white());
-            if (item.detail && item.detail[0]) wrapped_label(row.box, item.detail, &font_mono_12, muted());
         }
         label(root_, "Swipe up or down", 84, 394, 300, &font_mono_semibold_12, muted());
         update();
@@ -135,7 +146,7 @@ public:
             const bool current = state == badge_schedule::State::OnNow;
             set_text(row.now, current ? "On now" : "");
             lv_obj_set_style_border_opa(row.box, current ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
-            lv_obj_set_style_bg_color(row.box, lv_color_hex(0x151515), 0);
+            lv_obj_set_style_bg_color(row.box, panel(), 0);
             lv_obj_set_style_opa(row.box, state == badge_schedule::State::Passed ? LV_OPA_50 : LV_OPA_COVER, 0);
         }
     }

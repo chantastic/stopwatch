@@ -88,9 +88,9 @@ private:
         for (int i = 0; i < 3; ++i) {
             auto* card = cards_[i];
             avatar(card);
-            label(card, name_.empty() ? "Your name" : name_.c_str(), 6, 174, 312, &font_mono_24);
+            label(card, name_.empty() ? "Your name" : name_.c_str(), 6, 172, 312, &font_mono_24);
             label(card, company_.empty() ? (filled ? "" : "Company") : company_.c_str(),
-                  6, 209, 312, &font_mono_20, muted());
+                  6, 208, 312, &font_mono_20, muted());
             if (!filled) {
                 button(card, "Tap to configure", 62, 255, 200, 44, [this] { request_setup(context_); });
             } else {

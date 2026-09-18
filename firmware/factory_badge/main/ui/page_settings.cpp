@@ -6,14 +6,25 @@ namespace badge::ui {
 class SettingsPage final : public PageView {
 public:
     SettingsPage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        label(root_, "Settings", 84, 64, 300, &font_sans_24);
+        label(root_, "Settings", 84, 64, 300, &font_sans_24, cream());
         battery_ = label(root_, "", 64, 98, 340, &font_mono_semibold_12, muted());
-        auto* brightness_title = label(root_, "Brightness", 87, 159, 98, &font_sans_14);
+        auto* brightness_title = label(root_, "Brightness", 87, 157, 98, &font_sans_14, cream());
         lv_obj_set_style_text_align(brightness_title, LV_TEXT_ALIGN_LEFT, 0);
-        button(root_, "-", 186, 144, 62, 44, [this] { brightness(-10); });
-        button(root_, "+", 318, 144, 62, 44, [this] { brightness(10); });
-        brightness_ = label(root_, "", 249, 157, 68, &font_sans_16);
-        auto* orientation_title = label(root_, "Orientation", 87, 231, 98, &font_sans_14);
+        auto* minus = button(root_, "", 186, 144, 62, 44, [this] { brightness(-10); });
+        auto* plus = button(root_, "", 318, 144, 62, 44, [this] { brightness(10); });
+        // Figma uses geometric marks, independent of the text face.
+        auto bar = [](lv_obj_t* parent, int width, int height) {
+            auto* mark = container(parent, 0, 0, width, height);
+            lv_obj_set_style_bg_color(mark, white(), 0);
+            lv_obj_set_style_bg_opa(mark, LV_OPA_COVER, 0);
+            lv_obj_remove_flag(mark, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_center(mark);
+        };
+        bar(minus, 13, 2);
+        bar(plus, 11, 2);
+        bar(plus, 2, 11);
+        brightness_ = label(root_, "", 249, 156, 68, &font_sans_16, cream());
+        auto* orientation_title = label(root_, "Orientation", 87, 229, 98, &font_sans_14, cream());
         lv_obj_set_style_text_align(orientation_title, LV_TEXT_ALIGN_LEFT, 0);
         constexpr const char* names[] = {"Free", "Default", "180°"};
         constexpr int positions[] = {186, 256, 324};
@@ -25,20 +36,24 @@ public:
                 update();
             });
             set_font(lv_obj_get_child(orientation_[i], 0), &font_sans_12);
+            lv_obj_align(lv_obj_get_child(orientation_[i], 0), LV_ALIGN_CENTER, 0, -1);
+            lv_obj_set_style_text_color(lv_obj_get_child(orientation_[i], 0), white(), 0);
         }
         for (int y : {201, 273}) {
-            for (int x = 87; x < 380; x += 5) {
-                auto* dash = container(root_, x, y, 2, 1);
+            for (int x = 86; x < 380; x += 6) {
+                auto* dash = container(root_, std::max(87, x), y, x == 86 ? 2 : 3, 1);
                 lv_obj_remove_flag(dash, LV_OBJ_FLAG_CLICKABLE);
-                lv_obj_set_style_bg_color(dash, lv_color_hex(0x393939), 0);
+                lv_obj_set_style_bg_color(dash, lv_color_hex(0x171717), 0);
                 lv_obj_set_style_bg_opa(dash, LV_OPA_COVER, 0);
             }
         }
-        date_ = label(root_, "", 87, 291, 293, &font_sans_14);
+        date_ = label(root_, "", 87, 291, 293, &font_sans_14, cream());
         lv_obj_set_style_text_align(date_, LV_TEXT_ALIGN_LEFT, 0);
-        auto* hint = label(root_, "Edit badge or sync time", 87, 312, 293, &font_mono_semibold_12, muted());
+        auto* hint = label(root_, "Edit badge or sync time", 87, 308, 293, &font_mono_semibold_12, muted());
         lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_LEFT, 0);
-        button(root_, "Connect Phone", 87, 339, 293, 44, [this] { request_setup(context_); });
+        auto* connect = button(root_, "Connect Phone", 87, 339, 293, 44, [this] { request_setup(context_); });
+        set_font(lv_obj_get_child(connect, 0), &font_sans_14);
+        lv_obj_set_style_text_color(lv_obj_get_child(connect, 0), white(), 0);
         auto* test = button(root_, "Touch test", 110, 388, 116, 32, [] { ui_show_touch_test(); });
         auto* reset = button(root_, "Reset badge", 242, 388, 116, 32, [] { ui_show_reset(); });
         for (auto* control : {test, reset}) {

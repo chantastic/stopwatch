@@ -52,7 +52,9 @@ SSID text is white at 100%; hints use white at 50%.
 Inter approximates the Suisse outlines, while native LVGL label padding and
 line spacing match the recorded line boxes at whole pixels (20.8px becomes
 21px). LVGL's integer `text_letter_space` rounds the -0.24px tracking (-2% at
-12px) and +0.3px tracking to zero. No custom renderer is used. This is a font-role
+12px) and +0.3px tracking to zero. The later [page audit](../../../../../docs/pixel-audit-2026-09-17.md) places
+caption leading below the glyphs and adjusts measured visible baselines; native
+line boxes are retained. No custom renderer is used. This is a font-role
 and line-box match with the stated approximations, not a claim of pixel parity
 between the Suisse/Figma renderer and Inter/LVGL.
 

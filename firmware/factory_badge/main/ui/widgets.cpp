@@ -22,7 +22,7 @@ lv_obj_t* container(lv_obj_t* parent, int x, int y, int width, int height) {
 void set_font(lv_obj_t* object, const lv_font_t* font) {
     lv_obj_set_style_text_font(object, font, 0);
     // Figma line boxes, rounded to native display pixels. Keep native LVGL
-    // layout/rendering; padding supplies the first/last half-leading and the
+    // layout/rendering; padding supplies the first/last leading and the
     // line-space style supplies it between wrapped lines.
     int line_height = font->line_height;
     if (font == &font_mono_semibold_12) line_height = 21; // Figma: 20.8 px.
@@ -32,8 +32,11 @@ void set_font(lv_obj_t* object, const lv_font_t* font) {
     else if (font == &font_sans_24) line_height = 33;
     else if (font == &font_sans_32) line_height = 42;
     const int leading = std::max(0, line_height - int(font->line_height));
-    lv_obj_set_style_pad_top(object, leading / 2, 0);
-    lv_obj_set_style_pad_bottom(object, leading - leading / 2, 0);
+    // Plex captions and the Suisse substitute share Figma's measured top
+    // baseline; symmetric leading put their visible glyphs too low.
+    const int top = (font == &font_mono_semibold_12 || font == &font_sans_24) ? 0 : leading / 2;
+    lv_obj_set_style_pad_top(object, top, 0);
+    lv_obj_set_style_pad_bottom(object, leading - top, 0);
     lv_obj_set_style_text_line_space(object, leading, 0);
 }
 
@@ -64,7 +67,7 @@ lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, in
     lv_obj_set_style_bg_color(object, lv_color_hex(0x333333), LV_STATE_PRESSED);
     lv_obj_add_flag(object, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_add_flag(object, LV_OBJ_FLAG_EVENT_BUBBLE);
-    auto* title = label(object, text, 0, 0, width - 8);
+    auto* title = label(object, text, 0, 0, width - 8, &font_sans_16, cream());
     lv_obj_center(title);
     on_tap(object, std::move(action));
     return object;
