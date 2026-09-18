@@ -13,19 +13,29 @@ python3 scripts/generate-intro-loop.py /path/to/shader-recording-1786483880341.m
 
 The generator verifies that exact source, center-crops it to the display aspect,
 scales to native 468×466 pixels, and samples the complete ten-second sequence at
-6 frames per second. A shared palette preserves seven dark shades, reserving
-one entry for unchanged pixels. No dithering, colorization or generated motion
-is added. The source's motion is retained, with reduced frame rate and palette
+6 frames per second. A shared palette contains pure black and six dark shades,
+reserving one entry for unchanged pixels. Per the September 17 follow-up, the
+source's near-black background (`#111012`) is corrected to exact `#000000`.
+No dithering or generated motion is added. The source's motion is retained, with reduced frame rate and palette
 to fit the existing application partition. The central event mark remains a
 separate LVGL image over this background.
 
 Generated with FFmpeg 9.0.1 on September 17, 2026: **60 frames, 10.000 seconds,
 586,699 GIF bytes**, SHA-256
-`c3e99e61b4f24b349e9f64cbc58f4ef4e57c83488396aa803da5955a9bde7cb4`.
+`5592c7e4fa7a02704a3660aa73ee95b6f6e4bab099e23b729e1b51384ed9bbe1`.
 The generated C array is the flash asset; intermediate GIF/frames stay under
 `.build/design-loop/`. The generator rejects outputs larger than 800 KiB.
 Native resolution was retained because the half-size trial lost the small
 cross shapes visible in the supplied recording.
+
+The black correction changes only bytes 13–15: the first entry of the GIF's
+shared global palette. The generator pins the complete pre-correction GIF hash
+(`c3e99e61b4f24b349e9f64cbc58f4ef4e57c83488396aa803da5955a9bde7cb4`)
+before applying it. That inspected encoding has no local palettes; the first
+frame paints the whole canvas and later frames preserve unchanged pixels.
+Compressed indices, motion, all other shades and frame delays remain identical.
+LVGL packs the corrected entry to RGB565 `0x0000`. If an FFmpeg change produces
+a different intermediate file, inspect its palettes before updating the hash.
 
 The prior 12-fps asset (`5d04fb5083fa6201d15802b2850f8358703b8b90751a4697ac70ca49ab7e9d54`)
 exceeded the development board's render budget in the September 17 device run:
@@ -52,3 +62,14 @@ respecting the final frame's delay before repeating. The native regression at
 `tests/factory-intro/` compares all 60 frames and their timing to independently
 decoded Pillow references, and covers restore-background disposal and parent
 deletion releasing the GIF timer. No replacement decoder is maintained here.
+
+September 17 pure-black verification, based on `c2d74ff`: all 60 independently
+decoded frames differ only where `#111012` becomes `#000000`; other pixels and
+the 10,000-ms loop duration match exactly. Native LVGL animation/lifecycle and UI
+tests pass. The uploaded application SHA-256 is
+`82420080073eeb10b5d962d36472eaec29291f26c6a682ecdf9488e01621b716`.
+Three live framebuffer captures contain 186,874–189,079 exact black pixels,
+with advancing motion; black remains exact after leaving/reopening the page.
+Saved profile/preferences remain intact, and radios are off. This verifies
+framebuffer values, not physical panel luminance. Private evidence stays under
+`.build/pure-black-verification/`.

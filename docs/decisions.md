@@ -13,6 +13,10 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 black-level follow-up: the moving intro's background is pure
+  `#000000`. Correct only the shared near-black palette entry; preserve the
+  supplied logo, other animation shades, motion and timing.
+
 - September 17 meeting follow-up: label the customization page **Hack this device.**
   with **Learn how**, default brightness to 60%, and display clocks in 12-hour
   AM/PM format. Add a deliberately confirmed badge reset that clears manual
