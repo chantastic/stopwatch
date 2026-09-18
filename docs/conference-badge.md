@@ -19,7 +19,8 @@ page:
    in the badge's local time. The current block says **On now**; passed blocks
    are dimmed. Times, wrapped titles and available speaker details stay visible.
 3. **Developers After Dark**: its locked page says `tap the code to reveal a secret
-   invitation`. Enter Morse `init` by tapping/holding anywhere on the page except
+   invitation`, with the event name hidden until reveal. Enter Morse `init` by
+   tapping/holding anywhere on the page except
    its navigation arrows, or wait for the timed reveal below. Successful code
    plays the intro loop once with `You're` → `Invited` → `To`, then reveals the
    event heading. Actual invitation details remain pending the destination URL.

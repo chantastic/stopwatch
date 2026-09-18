@@ -55,6 +55,8 @@ public:
         if (displayed_state_ != int(revealed)) {
             const bool code_accepted = revealed && submitted_ && displayed_state_ == 0;
             displayed_state_ = int(revealed);
+            set_hidden(title_, !revealed);
+            set_hidden(subtitle_, !revealed);
             lv_obj_set_y(prompt_, revealed ? 249 : 216);
             if (revealed) lv_obj_remove_flag(root_, LV_OBJ_FLAG_CLICKABLE);
             else lv_obj_add_flag(root_, LV_OBJ_FLAG_CLICKABLE);

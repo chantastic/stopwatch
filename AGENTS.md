@@ -73,7 +73,8 @@
   permanent After Dark unlock and legacy records. Never exercise confirmed reset
   on a personalized device merely to test it. Use synthetic storage fixtures.
 - After Dark is always a visible page; retain all six pages/dots and stable IDs.
-  Its locked page says `tap the code to reveal a secret invitation`. Enter Morse
+  Its locked page hides the event name and says
+  `tap the code to reveal a secret invitation`. Enter Morse
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation
   and pushers never enter Morse. A successful code plays the existing intro GIF
   once with `You're` → `Invited` → `To`, then reveals the invitation heading.

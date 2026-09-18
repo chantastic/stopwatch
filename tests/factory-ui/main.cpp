@@ -236,6 +236,9 @@ int main(int argc, char** argv) {
     auto* invitation_prompt = find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation");
     assert(invitation_prompt && lv_obj_get_height(invitation_prompt) <= 100);
     assert_inside(invitation_prompt, lv_obj_get_parent(invitation_prompt));
+    assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
+    assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "After Dark"), LV_OBJ_FLAG_HIDDEN));
+    assert(lit_pixels(54, 78, 414, 166) == 0); // The secret event name is not painted while locked.
     assert(!find_gif(lv_display_get_screen_active(display)));
     snapshot("after-dark-locked");
     assert_idle();
@@ -377,6 +380,7 @@ int main(int argc, char** argv) {
     badge::ui_update(model); spin();
     assert(badge::ui_page_index() == 2);
     assert(find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
+    assert(lit_pixels(54, 78, 414, 166) == 0); // Relocking hides the event name again.
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 2 && model.after_dark_unlocked);
     assert(find_gif(lv_display_get_screen_active(display)));
@@ -434,6 +438,8 @@ int main(int argc, char** argv) {
     badge::ui_open_after_dark(); spin();
     assert(badge::ui_page_index() == 2);
     assert(find_label(lv_display_get_screen_active(display), "After Dark"));
+    assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
+    assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "After Dark"), LV_OBJ_FLAG_HIDDEN));
     assert(!find_gif(lv_display_get_screen_active(display))); // Timed reveals do not fake a code celebration.
     snapshot("after-dark-unlocked");
     badge::ui_page(-2); spin();
