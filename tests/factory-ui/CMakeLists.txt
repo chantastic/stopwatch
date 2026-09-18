@@ -16,7 +16,7 @@ endif()
 add_subdirectory("${FACTORY_COMPONENTS}/lvgl" lvgl)
 add_subdirectory("${FACTORY_COMPONENTS}/mooncake" mooncake)
 set(UI_ROOT "${REPO_ROOT}/firmware/factory_badge/main")
-file(GLOB UI_SOURCES CONFIGURE_DEPENDS "${UI_ROOT}/ui/*.cpp")
+file(GLOB UI_SOURCES CONFIGURE_DEPENDS "${UI_ROOT}/ui/*.cpp" "${UI_ROOT}/ui/*.c")
 add_executable(factory_ui_test main.cpp "${UI_ROOT}/badge_ui.cpp" ${UI_SOURCES})
 target_include_directories(factory_ui_test PRIVATE "${UI_ROOT}"
     "${FACTORY_COMPONENTS}/smooth_ui_toolkit/src"

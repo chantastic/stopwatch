@@ -50,7 +50,14 @@ class Device(usb.Device):
         image.save(path)
         return image
 
+def require_public_profile(state):
+    assert not any(state.get(field) for field in (
+        "configured_mask", "avatar", "name_present", "company_present"
+    )), "Refusing personal profile captures"
+
+
 def capture_pages(device, out):
+    require_public_profile(device.status())
     captured, skipped = [], []
     for index in range(6):
         # Read the current reveal state: a timed reveal can happen during this
@@ -80,7 +87,8 @@ def main():
     device = Device(args.port)
     original = device.status()
     assert original["build"] == "conference-factory-3"
-    assert not original["configured_mask"] and not original["avatar"] and not original["name_present"]
+    assert original.get("design") == "init-2026", "Verifier requires the init-2026 control layout"
+    require_public_profile(original)
     firmware = ROOT / ".build/firmware/devices_badge.ino.bin"
     report = {"initial": original, "physical_alignment_tested": False,
               "local_firmware_sha256": hashlib.sha256(firmware.read_bytes()).hexdigest()}
@@ -101,13 +109,13 @@ def main():
         time.sleep(.12)
         return device.status()
     def set_orientation(name):
-        tap({"Free": 136, "Default": 234, "180°": 332}[name], 369)
+        tap({"Free": 215, "Default": 284, "180°": 352}[name], 238)
         return wait_state(lambda s: s["orientation_mode"] == name and (name == "Free" or s["rotation"] == (0 if name == "Default" else 2)))
     def set_brightness(value):
         for _ in range(10):
             state = device.status()
             if state["brightness_percent"] == value: return
-            tap(342 if state["brightness_percent"] < value else 126, 177)
+            tap(349 if state["brightness_percent"] < value else 217, 166)
         raise AssertionError("Brightness did not reach target")
 
     try:
@@ -120,7 +128,7 @@ def main():
         report["animation"] = True
         device.page(5)
         before = device.status()
-        for x, y in ((342, 177), (154, 283), (314, 283), (332, 369)):
+        for x, y in ((349, 166), (234, 361), (234, 404), (352, 238)):
             device.touch("begin", x, y)
             device.touch("move", x, y - 70)
             device.touch("move", x, y)
@@ -134,7 +142,7 @@ def main():
         set_brightness(original["brightness_percent"])
         for name, rotation in (("Default", 0), ("180°", 2)):
             set_orientation(name); settle()
-            tap(314, 283)
+            tap(234, 404)
             device.send({"op": "touch_test_status"})
             state = json.loads(device.response(b"TOUCH_TEST_STATUS "))
             assert state["active"] and state["rotation"] == rotation
@@ -147,7 +155,7 @@ def main():
             device.action({"op": "button", "value": "blue"})
         report["settings_and_simulated_rotated_touch"] = True
         set_orientation(original["orientation_mode"]); settle()
-        tap(154, 283)
+        tap(234, 361)
         active = wait_state(lambda s: s["setup"] and s["wifi_mode"] == 2)
         report["ap_started"] = active["wifi_mode"] == 2
         device.send({"op": "capture_badge"})
@@ -160,10 +168,10 @@ def main():
         device.send({"op": "reboot"}); device.close(); time.sleep(2)
         device = Device(args.port)
         restored = wait_state(lambda s: s["page"] == 0 and s["clock_valid"])
-        for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "store_ready"):
+        for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "name_present", "company_present", "store_ready", "schedule_bookmarks"):
             assert restored[key] == original[key], key
         report["restart_restoration"] = True
-        device.page(5); tap(314, 283)
+        device.page(5); tap(234, 404)
         device.send({"op": "touch_test_status"})
         report["final_touch_test"] = json.loads(device.response(b"TOUCH_TEST_STATUS "))
         assert report["final_touch_test"]["active"]

@@ -1,0 +1,53 @@
+diff --git a/src/libs/gif/AnimatedGIF.h b/src/libs/gif/AnimatedGIF.h
+index 0922520..ecd423b 100644
+--- a/src/libs/gif/AnimatedGIF.h
++++ b/src/libs/gif/AnimatedGIF.h
+@@ -219,7 +219,7 @@ typedef struct gif_image_tag
+ #else
+     // Due to unaligned memory causing an exception, we have to do these macros the slow way
+     #define INTELSHORT(p) ((*p) + (*(p+1)<<8))
+-    #define INTELLONG(p) ((*p) + (*(p+1)<<8) + (*(p+2)<<16) + (*(p+3)<<24))
++    #define INTELLONG(p) ((uint32_t)(p)[0] | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24))
+ #endif // ALLOWS_UNALIGNED
+ #define BIGINT int32_t
+ #define BIGUINT uint32_t
+diff --git a/src/widgets/gif/lv_gif.c b/src/widgets/gif/lv_gif.c
+index be6ec18..70b2ba8 100644
+--- a/src/widgets/gif/lv_gif.c
++++ b/src/widgets/gif/lv_gif.c
+@@ -321,18 +321,15 @@ static inline void gif_blend_to_rgb565(GIFDRAW * pDraw, lv_draw_buf_t * draw_buf
+             }
+         }
+         else {
+-            /* Disposal 0,1,3: Replace transparent pixels with background color to maintain position
+-             * The gif_disposal_last_frame function handles the actual background clearing
+-            */
+-            uint16_t bg_color = pal[pDraw->ucBackground];
++            /* Transparent pixels preserve the previous frame. Disposal 2 is
++             * handled separately; do not paint the palette's transparent entry.
++             */
+             while(src < end) {
+                 pixel = *src++;
+-                if(pixel == pDraw->ucTransparent) {
+-                    *dst++ = bg_color;
+-                }
+-                else {
+-                    *dst++ = pal[pixel];
++                if(pixel != pDraw->ucTransparent) {
++                    *dst = pal[pixel];
+                 }
++                dst++;
+             }
+         }
+     }
+@@ -710,8 +707,9 @@ static void gif_next_frame_task_cb(lv_timer_t * t)
+     }
+     else {
+         gifobj->cur_frame_index++;
+-        lv_timer_set_period(gifobj->timer, ms_delay_next);
+     }
++    /* The last frame has its own delay before the next loop as well. */
++    lv_timer_set_period(gifobj->timer, ms_delay_next);
+ 
+     lv_draw_buf_flush_cache(gifobj->draw_buf, NULL);
+     lv_image_cache_drop(lv_image_get_src(obj));

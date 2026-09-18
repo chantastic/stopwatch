@@ -22,7 +22,7 @@ Views receive a `UiModel` and invoke callbacks. They must not read hardware,
 open NVS, start Wi-Fi, or write profile records. Update labels and styles in
 place; recreate a page on navigation or a structural change. Native LVGL owns
 widgets, scrolling, snap behavior, QR generation, input hit testing and animations.
-Shared brand images derive from the existing official masks; portraits remain
+Shared brand images preserve the supplied conference PNG masks exactly; portraits remain
 dynamic and never enter source or compiled assets.
 
 All LVGL and board calls run on the main task. HTTP and DNS run separately;
@@ -60,7 +60,9 @@ are not imported. RTC reads are validated and do not silently invent a date.
 
 The existing six-partition map is retained exactly. In particular, `ffat` stays
 at `0x610000`, size `0x9e0000`, holding LittleFS. Profile records retain the
-`INITCF01` format, SHA-256 verification, native RGB565 pixels and atomic rename.
+`INITCF01` container, SHA-256 verification, native RGB565 pixels and atomic rename.
+The reader accepts original v1 metadata and v2 metadata with an optional company;
+company-free writes remain v1. Agenda bookmarks use a separate versioned NVS u32.
 Brightness/orientation/network keys in `conference_ui` and clock offset in
 `conf-clock` retain their names and types. Neither boot nor mount failure formats
 storage or erases NVS.

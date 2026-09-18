@@ -13,6 +13,8 @@ source = (ROOT / "firmware/factory_badge/main/services.cpp").read_text()
 # Compile the actual production validators/record read/write helpers. Platform
 # mount/Wi-Fi code stays out; host adapters supply crypto and temporary files.
 production = source[source.index("bool alnum("):source.index("std::string random_hex(")]
+production += source[source.index("std::string escape("):source.index("const char* status_text(")]
+production += source[source.index("bool json_fields("):source.index("void finish_session(")]
 prefix = (HERE / "fixture-prefix.cpp").read_text().replace("@@ROOT@@", str(ROOT))
 initialize = source[source.index("bool profile_initialize_for_conference()"):source.rindex("} // namespace badge")]
 tests = (HERE / "fixture-tests.cpp").read_text().replace("// NATIVE_INITIALIZER_HERE", initialize)
@@ -37,3 +39,4 @@ assert script, "Native portal asset must contain its local browser script"
 (OUT / "portal.js").write_text(script[1].replace("{{NONCE}}", "0123456789abcdef0123456789abcdef"))
 run("node", "--check", OUT / "portal.js")
 run("node", ROOT / "tests/conference-profile-host/browser-clock.cjs", OUT / "portal.js")
+run("node", HERE / "browser-profile.cjs", OUT / "portal.js")

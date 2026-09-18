@@ -1,24 +1,30 @@
 #include "chrome.h"
+#include "design_assets.h"
+#include <algorithm>
 
 namespace badge::ui {
 Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
     root_ = container(parent, 0, 0, Width, Height);
     lv_obj_center(root_);
-    // Transparent chrome must not intercept the page's controls or scrolling.
     lv_obj_remove_flag(root_, LV_OBJ_FLAG_CLICKABLE);
-    clock_ = label(root_, "--:--", 134, 26, 200, &lv_font_montserrat_18, muted());
-    auto* left = button(root_, LV_SYMBOL_LEFT, 10, 170, 54, 126, [] { ui_page(-1); });
-    auto* right = button(root_, LV_SYMBOL_RIGHT, 404, 170, 54, 126, [] { ui_page(1); });
+    brand(root_, 24);
+    brand_ = lv_obj_get_child(root_, -1);
+    auto* left = button(root_, "", 14, 170, 54, 126, [] { ui_page(-1); });
+    auto* right = button(root_, "", 398, 170, 54, 126, [] { ui_page(1); });
     for (auto* arrow : {left, right}) {
         lv_obj_set_style_bg_opa(arrow, LV_OPA_TRANSP, 0);
         lv_obj_set_style_bg_opa(arrow, LV_OPA_30, LV_STATE_PRESSED);
-        lv_obj_set_style_radius(arrow, 24, 0);
+        auto* image = lv_image_create(arrow);
+        lv_image_set_src(image, arrow == left ? &supplied_left : &supplied_right);
+        lv_obj_set_style_image_recolor(image, white(), 0);
+        lv_obj_set_style_image_recolor_opa(image, LV_OPA_COVER, 0);
+        lv_obj_center(image);
+        lv_obj_remove_flag(image, LV_OBJ_FLAG_CLICKABLE);
     }
-    footer_ = label(root_, "", 84, 416, 300, &lv_font_montserrat_18);
+    footer_ = label(root_, "", 114, 119, 240, &font_mono_12, muted());
     for (int i = 0; i < PageCount; ++i) {
-        dots_[i] = container(root_, 191 + i * 16, 445, 7, 7);
+        dots_[i] = container(root_, 0, 432, 8, 8);
         lv_obj_remove_flag(dots_[i], LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_style_radius(dots_[i], LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_opa(dots_[i], LV_OPA_COVER, 0);
     }
     update();
@@ -26,21 +32,27 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
 Chrome::~Chrome() { if (root_) lv_obj_delete(root_); }
 void Chrome::reflow() { lv_obj_center(root_); }
 void Chrome::update() {
-    set_hidden(root_, context_.setup || context_.touch_test);
-    set_text(clock_, context_.model.clock_text);
-    set_text(footer_, context_.page == 5 && context_.model.settings_pending ? "Saving settings..." : PageNames[context_.page]);
-    const int count = visible_page_count(context_.model);
+    const auto& model = context_.model;
+    const bool profile_filled = context_.page == 3 &&
+        (!model.name.empty() || !model.company.empty() || model.avatar ||
+         std::any_of(model.socials.begin(), model.socials.end(), [](const auto& url) { return !url.empty(); }));
+    set_hidden(root_, context_.setup || context_.touch_test || profile_filled);
+    set_hidden(brand_, context_.page == 0);
+    set_text(footer_, context_.page == 5 && model.settings_pending ? "Saving settings..." : "");
+    const int count = visible_page_count(model);
     if (page_ != context_.page || visible_count_ != count) {
         page_ = context_.page;
         visible_count_ = count;
         int slot = 0;
-        const int start = (Width - ((count - 1) * 16 + 7)) / 2;
+        const int start = (Width - ((count - 1) * 16 + 8)) / 2;
         for (int i = 0; i < PageCount; ++i) {
-            const bool visible = page_visible(i, context_.model);
+            const bool visible = page_visible(i, model);
             set_hidden(dots_[i], !visible);
             if (!visible) continue;
-            lv_obj_set_pos(dots_[i], start + slot++ * 16, 445);
-            lv_obj_set_style_bg_color(dots_[i], i == page_ ? white() : lv_color_hex(0x55555e), 0);
+            const bool active = i == page_;
+            lv_obj_set_pos(dots_[i], start + slot++ * 16 - (active ? 2 : 0), active ? 430 : 432);
+            lv_obj_set_size(dots_[i], active ? 12 : 8, active ? 12 : 8);
+            lv_obj_set_style_bg_color(dots_[i], active ? white() : lv_color_hex(0x777777), 0);
         }
     }
 }

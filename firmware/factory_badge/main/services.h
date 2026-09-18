@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace badge {
-struct Profile { std::string name; std::string urls[3]; };
+struct Profile { std::string name; std::string urls[3]; std::string company; };
 struct ProfileSnapshot {
   Profile profile;
   // Native little-endian RGB565, 160 x 160; immutable across UI frames.

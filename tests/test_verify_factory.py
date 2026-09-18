@@ -44,7 +44,8 @@ class CapturePagesTests(unittest.TestCase):
         # provision a clock or enter Morse merely to make a capture reachable.
         self.assertEqual([call[1] for call in device.calls if call[0] == "page"], captured)
         self.assertEqual(len([call for call in device.calls if call[0] == "capture"]), len(captured))
-        self.assertEqual(device.calls[4], ("status",))
+        self.assertEqual(device.calls[0], ("status",))
+        self.assertEqual(device.calls[5], ("status",))
         return captured, skipped
 
     def test_locked_invitation_is_skipped_and_reported(self):
@@ -56,6 +57,19 @@ class CapturePagesTests(unittest.TestCase):
         captured, skipped = self.capture({"after_dark_unlocked": True, "page_count": 6})
         self.assertEqual(captured, [0, 1, 2, 3, 4, 5])
         self.assertEqual(skipped, [])
+
+    def test_personal_fields_refuse_capture_before_navigation(self):
+        # A company-only badge contains attendee data even without a name,
+        # photo or configured account. Reject all personal profile variants.
+        for field in ("company_present", "name_present", "avatar", "configured_mask"):
+            with self.subTest(field=field):
+                state = {"company_present": False, "name_present": False,
+                         "avatar": False, "configured_mask": 0}
+                state[field] = 1
+                device = FakeDevice(state)
+                with self.assertRaisesRegex(AssertionError, "personal profile"):
+                    factory.capture_pages(device, Path("unused-private-output"))
+                self.assertEqual(device.calls, [("status",)])
 
     def test_published_firmware_without_reveal_flag_retains_six_pages(self):
         captured, skipped = self.capture({"page_count": 6})

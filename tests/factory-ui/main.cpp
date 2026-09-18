@@ -1,5 +1,6 @@
 #include "badge_ui.h"
 #include "schedule.h"
+#include "ui/design_fonts.h"
 #include <mooncake.h>
 #include <cassert>
 #include <cstdio>
@@ -50,13 +51,18 @@ int lit_pixels(int x0, int y0, int x1, int y1) {
     }
     return count;
 }
-void assert_chrome() {
-    assert(lit_pixels(134, 26, 334, 47) > 100);  // Clock.
-    assert(lit_pixels(10, 210, 64, 250) > 40);   // Left arrow.
-    assert(lit_pixels(404, 210, 458, 250) > 40); // Right arrow.
-    assert(lit_pixels(84, 416, 384, 438) > 150); // Page name.
-    assert(lit_pixels(191, 445, 278, 452) > 25); // Page dots.
+void assert_chrome(bool intro = false, bool filled_profile = false) {
+    if (filled_profile) {
+        assert(lit_pixels(10, 210, 64, 250) == 0);
+        assert(lit_pixels(184, 430, 284, 442) == 0);
+        return;
+    }
+    if (!intro) assert(lit_pixels(203, 24, 265, 38) > 30); // Supplied small mark.
+    assert(lit_pixels(10, 210, 64, 253) > 40);
+    assert(lit_pixels(404, 210, 458, 253) > 40);
+    assert(lit_pixels(184, 430, 284, 442) > 25); // Square page indicators.
 }
+
 void assert_idle() {
     spin(30); // Finish button style transitions.
     const auto before = flush_count;
@@ -93,7 +99,8 @@ void assert_inside(lv_obj_t* child, lv_obj_t* parent) {
 }
 int visible_dots(lv_obj_t* object) {
     if (lv_obj_has_flag(object, LV_OBJ_FLAG_HIDDEN)) return 0;
-    if (lv_obj_get_width(object) == 7 && lv_obj_get_height(object) == 7) return 1;
+    if ((lv_obj_get_width(object) == 8 && lv_obj_get_height(object) == 8) ||
+        (lv_obj_get_width(object) == 12 && lv_obj_get_height(object) == 12)) return 1;
     int count = 0;
     for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i)
         count += visible_dots(lv_obj_get_child(object, i));
@@ -130,16 +137,18 @@ int main(int argc, char** argv) {
     });
 
     int brightness = 0, orientation = -1, network = -1, setup = 0;
+    int bookmarked = -1;
     badge::UiCallbacks callbacks;
     callbacks.brightness = [&](int value) { brightness = value; };
     callbacks.orientation = [&](badge::Orientation value) { orientation = int(value); };
+    callbacks.bookmark = [&](int index) { bookmarked = index; };
     callbacks.network = [&](int value) { network = value; };
     callbacks.request_setup = [&] { ++setup; badge::ui_show_setup("init-test-badge", "example1234"); };
     callbacks.close_setup = [] { badge::ui_close_setup(false); };
     badge::ui_init(display, callbacks);
     badge::UiModel model;
     model.clock_text = "12:34";
-    model.date_text = "Sep 17, 2026 12:34";
+    model.date_text = "2026-09-17 12:34";
     model.clock_valid = true;
     model.battery_percent = 74;
     badge::ui_update(model);
@@ -230,7 +239,7 @@ int main(int argc, char** argv) {
     for (int page = 0; page < 6; ++page) {
         assert(badge::ui_page_index() == page);
         snapshot("page" + std::to_string(page));
-        assert_chrome();
+        assert_chrome(page == 0);
         if (page != 0) assert_idle();
         if (page < 5) {
             tap(434, 233); // Native arrow hit test, release and page lifecycle.
@@ -255,17 +264,17 @@ int main(int argc, char** argv) {
     assert(brightness == 0);
     tap(342, 177);
     assert(brightness == 60);
-    tap(332, 369);
+    tap(350, 238);
     assert(orientation == 2);
 
-    tap(314, 283);
+    tap(234, 404);
     assert(badge::ui_touch_test_active());
     badge::ui_touch_sample(234, 234, 234, 234, true, 0);
     snapshot("touch");
     assert(badge::ui_touch_state().x == 234);
     tap(234, 417);
     assert(!badge::ui_touch_test_active() && badge::ui_page_index() == 5);
-    tap(154, 283);
+    tap(234, 360);
     assert(badge::ui_setup_active() && setup == 1);
     snapshot("setup");
     tap(234, 414);
@@ -296,7 +305,7 @@ int main(int argc, char** argv) {
         heights[i] = lv_obj_get_height(row);
     }
     auto* long_title = find_label(schedule, "Networking break and sponsors");
-    assert(lv_obj_get_height(long_title) > lv_font_montserrat_24.line_height);
+    assert(lv_obj_get_height(long_title) > font_sans_20.line_height);
     auto* past = lv_obj_get_child(schedule, 0);
     auto* current = lv_obj_get_child(schedule, 1);
     auto* upcoming = lv_obj_get_child(schedule, 2);
@@ -308,6 +317,23 @@ int main(int argc, char** argv) {
     assert(lv_obj_get_style_opa(upcoming, LV_PART_MAIN) == LV_OPA_COVER);
     assert_inside(current, schedule);
     snapshot("schedule-current");
+    lv_area_t current_area;
+    lv_obj_get_coords(current, &current_area);
+    const int bookmark_y = current_area.y1 + 26;
+    tap(340, bookmark_y);
+    assert(bookmarked == 1);
+    const int bookmarked_scroll = lv_obj_get_scroll_y(schedule);
+    model.schedule_bookmarks = 1 << 1;
+    badge::ui_update(model); spin();
+    assert(lv_obj_get_scroll_y(schedule) == bookmarked_scroll);
+    snapshot("schedule-bookmarked");
+    bookmarked = -1;
+    touch(340, bookmark_y, true);
+    touch(310, bookmark_y, true);
+    touch(340, bookmark_y, true);
+    touch(340, bookmark_y, false);
+    assert(bookmarked == -1);
+
     assert_idle();
     const int entry_scroll = lv_obj_get_scroll_y(schedule);
     swipe(234, 335, 234, 170);
@@ -383,6 +409,7 @@ int main(int argc, char** argv) {
     assert(network > 0 && badge::ui_page_index() == 3);
     // Populate each social independently; the current card must remain selected.
     model.name = "Conference attendee";
+    model.company = "WorkOS";
     model.socials[0] = "https://github.com/octocat";
     model.socials[1] = "https://x.com/example";
     model.selected_network = 0;
@@ -393,27 +420,43 @@ int main(int argc, char** argv) {
     badge::ui_update(model);
     spin();
     snapshot("profile");
-    assert_chrome();
+    assert_chrome(false, true);
     assert_idle();
     tap(234, 314);
     snapshot("expanded");
-    assert_chrome();
+    assert_chrome(false, true);
     assert(lit_pixels(101, 104, 367, 370) > 20000); // Expanded QR is rendered.
     tap(234, 230);
     snapshot("profile-restored");
-    assert_chrome();
+    assert_chrome(false, true);
     assert_idle();
 
     // Programmatic selection goes to the third, unconfigured social card.
     model.selected_network = 2;
     badge::ui_update(model);
     spin();
-    tap(234, 339);
+    tap(234, 280);
+    assert(find_label(lv_display_get_screen_active(display), "No account yet"));
+    tap(234, 300);
     assert(badge::ui_setup_active() && setup == 2);
     badge::ui_close_setup(true);
     spin();
     assert(badge::ui_page_index() == 3 && !badge::ui_setup_active());
-    assert_chrome();
+    assert_chrome(false, true);
+
+    // A profile with only a social URL must still expose that QR, and an
+    // image replacement must not leave an expanded code for stale profile data.
+    model.name.clear(); model.company.clear(); model.avatar = nullptr;
+    model.avatar_width = model.avatar_height = 0;
+    model.selected_network = 0; ++model.profile_revision;
+    badge::ui_update(model); spin();
+    tap(234, 180); spin();
+    assert(find_label(lv_display_get_screen_active(display), "Tap to close"));
+    assert(lit_pixels(101, 104, 367, 370) > 20000);
+    model.company = "Example company"; ++model.profile_revision;
+    badge::ui_update(model); spin();
+    assert(!find_label(lv_display_get_screen_active(display), "Tap to close"));
+    assert(find_label(lv_display_get_screen_active(display), "Example company"));
 
     mooncake::GetMooncake().uninstallAllApps();
     lv_indev_delete(input);

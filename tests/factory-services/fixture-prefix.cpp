@@ -15,6 +15,12 @@
 #include <CommonCrypto/CommonDigest.h>
 #include <Arduino.h>
 #include "@@ROOT@@/firmware/factory_badge/main/services.h"
+#include "@@ROOT@@/firmware/factory_badge/main/portal_page.h"
+// Only the cJSON tree access boundary is adapted. The production form validator
+// below handles field names, duplicates, types and normalized values itself.
+struct cJSON { const char* string=nullptr; const char* valuestring=nullptr; int type=1; cJSON* child=nullptr; cJSON* next=nullptr; };
+bool cJSON_IsString(const cJSON* value){return value&&value->type==1;}
+cJSON* cJSON_GetObjectItemCaseSensitive(cJSON* root,const char* key){for(auto item=root->child;item;item=item->next)if(item->string&&!strcmp(item->string,key))return item;return nullptr;}
 static std::string root;
 static bool rename_failed=false, sync_failed=false;
 int checked_rename(const char* a,const char* b){return rename_failed?-1:std::rename(a,b);}
@@ -61,6 +67,7 @@ std::string record_path,temp_path;
 #define kTemporary temp_path.c_str()
 std::mutex data_mutex,write_mutex,portal_mutex;
 ProfileSnapshot stored;
+std::string session_nonce="0123456789abcdef0123456789abcdef";
 PortalSnapshot portal;bool requested=false,running=false;
 #define rename checked_rename
 #define fsync checked_sync

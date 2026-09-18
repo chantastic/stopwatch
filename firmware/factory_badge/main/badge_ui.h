@@ -14,6 +14,7 @@ enum class Orientation : uint8_t { Free, Default, UpsideDown };
 // until the next ui_update(), including while LVGL renders the current frame.
 struct UiModel {
     std::string name;
+    std::string company;
     std::array<std::string, 3> socials;
     std::string clock_text = "--:--";
     std::string date_text = "Date / time not set";
@@ -30,6 +31,7 @@ struct UiModel {
     bool after_dark_unlocked = false;
     int schedule_minute = -1; // Local minute of day; -1 when the clock is unset.
     int schedule_current = -1;
+    uint16_t schedule_bookmarks = 0;
 };
 
 struct UiCallbacks {
@@ -38,6 +40,7 @@ struct UiCallbacks {
     std::function<void(int)> brightness; // Absolute percentage, 10 through 100.
     std::function<void(Orientation)> orientation;
     std::function<void(int)> network;
+    std::function<void(int)> bookmark; // Toggle this agenda item.
 };
 
 struct UiTouchSample {

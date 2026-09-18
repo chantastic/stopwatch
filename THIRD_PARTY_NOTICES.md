@@ -30,6 +30,18 @@ ESP32 Arduino, M5Unified, M5GFX, ArduinoJson, and their bundled components retai
 - [M5GFX](https://github.com/m5stack/M5GFX)
 - [ArduinoJson](https://github.com/bblanchon/ArduinoJson)
 
+## Badge typography
+
+The native UI's generated `font_mono_*.c` assets derive from Roboto Mono Regular,
+Copyright 2015 The Roboto Mono Project Authors. Its `font_sans_*.c` assets derive
+from Inter Regular, Copyright 2016 The Inter Project Authors. Both font families
+and their converted bitmap subsets use the SIL Open Font License 1.1.
+
+Complete license texts, exact upstream revisions and checksums, and reproducible
+conversion instructions are retained in
+[`firmware/factory_badge/main/ui/fonts/`](firmware/factory_badge/main/ui/fonts/README.md).
+The MIT-licensed LVGL `lv_font_conv` 1.5.3 is used only to generate these assets.
+
 ## Brand assets
 
 `init_wordmark.h` contains a raster mask derived from the `init()` wordmark on the [WorkOS conference website](https://workos.com/init). `github_mark.h` contains a raster mask of the official GitHub Invertocat from the [GitHub brand toolkit](https://brand.github.com/foundations/logo). The other provider identifiers and layouts refer to LinkedIn and X.

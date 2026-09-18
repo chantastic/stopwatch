@@ -4,6 +4,7 @@
 #include "services.h"
 #include "conference_settings.h"
 #include "schedule.h"
+#include "schedule_bookmarks.h"
 #include "orientation_filter.h"
 #include "button_gesture.h"
 #include "morse_unlock.h"
@@ -29,6 +30,7 @@ OrientationFilter orientation;
 BadgeButtonGesture buttons;
 MorseUnlock morse;
 badge_after_dark::Unlock afterDark;
+badge_schedule::Bookmarks bookmarks;
 badge::UiModel model;
 badge::ProfileSnapshot profile;
 nvs_handle_t preferences;
@@ -74,6 +76,8 @@ void refreshModel() {
     auto previousAvatar = profile.avatar; // Keep previous image alive through widget update.
     profile = badge::profile_snapshot();
     model.name = profile.profile.name;
+    model.company = profile.profile.company;
+    model.schedule_bookmarks = bookmarks.mask();
     for (size_t i = 0; i < 3; ++i) model.socials[i] = profile.profile.urls[i];
     model.avatar = profile.avatar && !profile.avatar->empty() ? profile.avatar->data() : nullptr;
     model.avatar_width = model.avatar_height = model.avatar ? 160 : 0;
@@ -82,7 +86,7 @@ void refreshModel() {
     model.battery_percent = power.valid ? power.percent : -1;
     model.brightness_percent = settings.brightness;
     model.orientation = static_cast<badge::Orientation>(settings.orientation);
-    model.settings_pending = settings.pending();
+    model.settings_pending = settings.pending() || bookmarks.pending();
     model.clock_text = badge_clock::timeText();
     model.date_text = badge_clock::dateText();
     model.clock_valid = badge_clock::valid();
@@ -112,6 +116,10 @@ void status(const char* nonce) {
     data["rotation"] = board::rotation(); data["preferences_pending"] = settings.pending();
     data["preference_writes"] = preferenceWrites; data["network"] = model.selected_network;
     data["configured_mask"] = mask; data["avatar"] = bool(saved.avatar);
+    data["company_present"] = !saved.profile.company.empty();
+    data["schedule_bookmarks"] = bookmarks.mask();
+    data["bookmarks_pending"] = bookmarks.pending();
+    data["design"] = "init-2026";
     data["name_present"] = !saved.profile.name.empty(); data["store_ready"] = saved.ready;
     data["setup"] = setupRequested || portal.active || portal.starting;
     data["wifi_mode"] = int(wifi); data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
@@ -244,6 +252,11 @@ void pollCommands() {
     }
 }
 void persist(uint32_t now) {
+    if (bookmarks.saveDue(now)) {
+        if (preferencesReady && nvs_set_u32(preferences, "agenda_saved", bookmarks.encoded()) == ESP_OK && nvs_commit(preferences) == ESP_OK) {
+            ++preferenceWrites; bookmarks.saved();
+        } else bookmarks.saveFailed(now);
+    }
     if (afterDark.saveDue(now)) {
         if (preferencesReady && nvs_set_u8(preferences, "after_dark_v1", afterDark.encoded()) == ESP_OK && nvs_commit(preferences) == ESP_OK) {
             ++preferenceWrites; afterDark.saved();
@@ -286,12 +299,14 @@ extern "C" void app_main() {
     esp_err_t nvs = nvs_flash_init();
     if (nvs != ESP_OK || !board::init()) { line("CONFERENCE_BOOT_FAILED"); return; }
     preferencesReady = nvs_open("conference_ui", NVS_READWRITE, &preferences) == ESP_OK;
-    uint32_t value = 0; uint8_t network = 0, savedUnlock = 0;
+    uint32_t value = 0, savedBookmarks = 0; uint8_t network = 0, savedUnlock = 0;
     if (preferencesReady) {
         nvs_get_u32(preferences, "prefs", &value); nvs_get_u8(preferences, "network", &network);
         nvs_get_u8(preferences, "after_dark_v1", &savedUnlock);
+        nvs_get_u32(preferences, "agenda_saved", &savedBookmarks);
     }
     afterDark.restore(savedUnlock);
+    bookmarks.restore(savedBookmarks);
     settings.restore(value); model.selected_network = network < 3 ? network : 0;
     // A finger held during boot can defer rotation. Keep the filter aligned
     // with the actual display and retry the saved fixed mode after release.
@@ -315,6 +330,9 @@ extern "C" void app_main() {
         if (selected >= 0 && selected < 3 && selected != model.selected_network) {
             model.selected_network = selected; networkSaveAt = board::millis() + 1200;
         }
+    };
+    callbacks.bookmark = [](int index) {
+        if (bookmarks.toggle(index, board::millis())) refreshModel();
     };
     badge::ui_init(board::display(), std::move(callbacks));
     refreshModel();

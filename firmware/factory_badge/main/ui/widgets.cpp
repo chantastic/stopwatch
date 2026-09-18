@@ -1,5 +1,6 @@
 #include "widgets.h"
 #include "brand_assets.h"
+#include "design_assets.h"
 #include <algorithm>
 #include <cstring>
 
@@ -38,11 +39,11 @@ lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, in
     lv_obj_set_size(object, width, height);
     lv_obj_set_style_bg_color(object, panel(), 0);
     lv_obj_set_style_bg_opa(object, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(object, 10, 0);
+    lv_obj_set_style_radius(object, 0, 0);
     lv_obj_set_style_border_width(object, 0, 0);
     lv_obj_set_style_shadow_width(object, 0, 0);
     lv_obj_set_style_pad_all(object, 0, 0);
-    lv_obj_set_style_bg_color(object, lv_color_hex(0x393345), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(object, lv_color_hex(0x333333), LV_STATE_PRESSED);
     lv_obj_add_flag(object, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_add_flag(object, LV_OBJ_FLAG_EVENT_BUBBLE);
     auto* title = label(object, text, 0, 0, width - 8);
@@ -114,11 +115,12 @@ lv_obj_t* qr(lv_obj_t* parent, const std::string& value, int x, int y, int size)
 }
 void brand(lv_obj_t* parent, int y, bool large) {
     auto* image = lv_image_create(parent);
-    lv_image_set_src(image, large ? &init_large : &init_small);
+    lv_image_set_src(image, large ? &supplied_logo_large : &supplied_logo_small);
     lv_obj_set_style_image_recolor(image, white(), 0);
     lv_obj_set_style_image_recolor_opa(image, LV_OPA_COVER, 0);
     lv_obj_align(image, LV_ALIGN_TOP_MID, 0, y);
 }
+
 void request_setup(Context& context) {
     if (!context.setup && !context.touch_test && context.callbacks.request_setup) context.callbacks.request_setup();
 }

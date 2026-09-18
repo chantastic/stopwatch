@@ -39,6 +39,12 @@
   [conference-clock.md](docs/conference-clock.md). The six-page UI supersedes
   the connected badge/voice controls below; that previous application is retained
   in `legacy_connected_app.h` and Git history and is not compiled into this build.
+- The September 17 supplied init() designs use exact exported brand masks in
+  `main/ui/assets/` and the supplied intro clip through native LVGL GIF playback.
+  Keep these shapes intact. Company is optional manual profile data; schedule
+  bookmarks persist separately. A configured profile hides chrome but retains
+  physical/horizontal paging and tap-to-QR. Do not substitute the mockup's sample
+  QR for real phone credentials or a pending invitation destination.
 - Normal operation has Wi-Fi and Bluetooth off. Temporary setup is AP-only,
   with manual name/social fields and image upload. Never load authenticated
   identity caches into the manual conference model or require a cloud login.

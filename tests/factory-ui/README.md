@@ -7,12 +7,12 @@ Address/undefined-behavior sanitizers are enabled by default.
 
 Checks cover hidden invitation traversal and five/six centered dots, noninterrupting
 reveal during agenda scrolling/modals, Morse-success page entry, all six pages;
-fixed chrome after partial redraws; no redraws on idle
+supplied-brand chrome and square page indicators after partial redraws; no redraws on idle
 static pages; release-only buttons; drag-out-and-back, within-button drag and
 long-hold cancellation; real agenda text and wrapped titles/details; current/past/upcoming
-styles, invalid time, daily reset, entry focus and preserved schedule scroll; native
+styles, release-only bookmark toggles, invalid time, daily reset, entry focus and preserved schedule scroll; native
 schedule/social scrolling; dynamic profile and
-avatar updates; QR expansion; setup return paths; and Touch test lifecycle.
+avatar/company updates, social-only profiles and configured faces without chrome; QR expansion; setup return paths; and Touch test lifecycle.
 They do not validate the physical sensor, display transport, or orientation HAL.
 
 Optional review images (PPM, outside Git):

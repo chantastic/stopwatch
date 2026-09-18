@@ -12,13 +12,15 @@ hardware, rotate touch coordinates, access storage, or start network workers.
   share a release-only tap binding that permanently cancels a dragged or held
   press, including a drag that leaves and re-enters a button. LVGL owns widget
   hit testing and scroll recognition.
-- `chrome.*`: clock, left/right controls, page name and dots on the LVGL top layer.
-  Chrome is hidden during setup and Touch test.
+- `chrome.*`: supplied small wordmark, left/right controls and square page indicators on the LVGL top layer.
+  Chrome is hidden during setup, Touch test and a configured profile face.
 - `page_*.cpp`: the six page implementations. Edit a page here without changing
   input drivers or services. Schedule and social cards use native scroll views.
 - `modal_*.cpp`: setup credentials and diagnostic touch targets.
-- `brand_assets.*`: compact alpha masks derived from the existing official init()
-  wordmark and GitHub mark. Attendee photos remain dynamic.
+- `design_assets.*`, `assets/`: original supplied brand alpha masks, without resampling.
+- `font_*.c`, `fonts/`: licensed native LVGL typography and pinned regeneration.
+- `intro_loop.*`: supplied motion clip converted for LVGL’s GIF widget, scoped to init().
+  Attendee photos remain dynamic.
 
 The public runtime supplies a `UiModel` and retains its avatar memory while that
 model is displayed. Callbacks request work from the runtime; workers must never

@@ -8,6 +8,22 @@
 > Hardware geometry, pin assignments, calibrated IMU mapping, dependency pins,
 > and partition-preservation constraints remain applicable.
 
+## Current conference data
+
+The active native conference firmware stores only manually entered name, optional
+company, three social URLs and a photo in its conference profile record. Bookmarked
+agenda items occupy a separate versioned NVS mask. These fields stay on the badge;
+the temporary local phone portal is AP-only and does not require a cloud login.
+Source branding and the embedded background clip are static conference artwork,
+not attendee data. Normal operation keeps Wi-Fi and Bluetooth off.
+
+Profile fields/photos, setup credentials and framebuffer captures remain private.
+The diagnostic status reports company presence and bookmark bits, not company
+text. The stock verifier refuses to capture any personalized profile, including
+a company-only profile. See [conference-badge.md](conference-badge.md) for the
+current record versions and local setup. The following sections document the
+retained connected prototype and data that normal updates intentionally preserve.
+
 This firmware is configured for chan.dev's Production Devices application. Each signed-in user sees their own connected profiles. The repository contains source and public configuration; device credentials and personal test captures are kept outside it.
 
 ## Where data lives

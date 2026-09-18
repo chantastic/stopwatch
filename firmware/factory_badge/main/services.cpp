@@ -96,6 +96,7 @@ bool social_url(unsigned network, const std::string& input, std::string& result)
 }
 bool profile_valid(const Profile& p) {
   std::string value; if (!name_valid(p.name, value) || value != p.name) return false;
+  if (!name_valid(p.company, value) || value != p.company) return false;
   for (unsigned i = 0; i < 3; ++i) if (!social_url(i, p.urls[i], value) || value != p.urls[i]) return false;
   return true;
 }
@@ -117,40 +118,52 @@ bool digest(const uint8_t* header, const uint8_t* metadata, size_t length, const
   if (ok) ok = mbedtls_sha256_finish(&hash, output) == 0;
   mbedtls_sha256_free(&hash); return ok;
 }
-size_t encode(const Profile& p, uint8_t* bytes) {
-  const std::string* fields[] = {&p.name, &p.urls[0], &p.urls[1], &p.urls[2]}; size_t used = 0;
-  for (auto field : fields) { if (used + 2 + field->size() > kMetadata) return 0; put16(bytes + used, field->size()); used += 2; memcpy(bytes + used, field->data(), field->size()); used += field->size(); }
+size_t encode(const Profile& p, uint8_t* bytes, uint16_t version) {
+  if (version != 1 && version != 2) return 0;
+  if (version == 1 && !p.company.empty()) return 0;
+  const std::string* fields[] = {&p.name, &p.urls[0], &p.urls[1], &p.urls[2], &p.company}; size_t used = 0;
+  for (unsigned i = 0; i < (version == 1 ? 4u : 5u); ++i) { auto field = fields[i];
+    if (used + 2 + field->size() > kMetadata) return 0;
+    put16(bytes + used, field->size()); used += 2;
+    memcpy(bytes + used, field->data(), field->size()); used += field->size();
+  }
   return used;
 }
-bool decode(const uint8_t* bytes, size_t length, Profile& p) {
-  std::string* fields[] = {&p.name, &p.urls[0], &p.urls[1], &p.urls[2]}; size_t used = 0;
-  for (auto field : fields) { if (used + 2 > length) return false; size_t n = u16(bytes + used); used += 2;
+bool decode(const uint8_t* bytes, size_t length, uint16_t version, Profile& p) {
+  if ((version != 1 && version != 2) || length > kMetadata) return false;
+  Profile candidate;
+  std::string* fields[] = {&candidate.name, &candidate.urls[0], &candidate.urls[1], &candidate.urls[2], &candidate.company}; size_t used = 0;
+  for (unsigned i = 0; i < (version == 1 ? 4u : 5u); ++i) { auto field = fields[i];
+    if (used + 2 > length) return false;
+    size_t n = u16(bytes + used); used += 2;
     if (n > length - used || memchr(bytes + used, 0, n)) return false;
     field->assign(reinterpret_cast<const char*>(bytes + used), n); used += n; }
-  return used == length && profile_valid(p);
+  if (used != length || !profile_valid(candidate)) return false;
+  p = std::move(candidate); return true;
 }
 bool read_record(const char* path, ProfileSnapshot& result, uint8_t* digest_out = nullptr) {
   File file(path, "rb"); if (!file.value) return false;
   struct stat info; uint8_t header[kHeader], metadata[kMetadata];
   if (fstat(fileno(file.value), &info) || !S_ISREG(info.st_mode) || info.st_size < int64_t(kHeader) ||
       info.st_size > int64_t(kHeader + kMetadata + kAvatarBytes) || fread(header, 1, kHeader, file.value) != kHeader) return false;
-  size_t meta_size = u32(header + 16), image_size = u32(header + 20);
-  if (memcmp(header, kMagic, 8) || u16(header + 8) != 1 || u16(header + 10) != kHeader || u16(header + 12) != kAvatarSide ||
+  size_t meta_size = u32(header + 16), image_size = u32(header + 20); uint16_t version = u16(header + 8);
+  if (memcmp(header, kMagic, 8) || (version != 1 && version != 2) || u16(header + 10) != kHeader || u16(header + 12) != kAvatarSide ||
       u16(header + 14) != kAvatarSide || !meta_size || meta_size > kMetadata || (image_size && image_size != kAvatarBytes) ||
       u32(header + 24) || u32(header + 28) || uint64_t(info.st_size) != kHeader + meta_size + image_size) return false;
-  if (fread(metadata, 1, meta_size, file.value) != meta_size || !decode(metadata, meta_size, result.profile)) return false;
+  Profile profile;
+  if (fread(metadata, 1, meta_size, file.value) != meta_size || !decode(metadata, meta_size, version, profile)) return false;
   std::shared_ptr<std::vector<uint16_t>> pixels;
   if (image_size) { pixels = std::make_shared<std::vector<uint16_t>>(kAvatarSide * kAvatarSide); if (fread(pixels->data(), 1, image_size, file.value) != image_size) return false; }
   if (ferror(file.value) || !file.close()) return false;
   uint8_t sum[32]; if (!digest(header, metadata, meta_size, pixels ? pixels->data() : nullptr, sum) || memcmp(sum, header + 32, 32)) return false;
   if (digest_out) memcpy(digest_out, sum, 32);
-  result.avatar = std::move(pixels); return true;
+  result.profile = std::move(profile); result.avatar = std::move(pixels); return true;
 }
 bool save_record(const Profile& profile, const uint8_t* jpeg, size_t jpeg_size, bool replace, std::string& error) {
   std::lock_guard<std::mutex> writing(write_mutex);
   auto previous = profile_snapshot();
   if (!previous.ready) { error = "Storage unavailable"; return false; }
-  if (!profile_valid(profile)) { error = "Check the name and social accounts"; return false; }
+  if (!profile_valid(profile)) { error = "Check the name, company and social accounts"; return false; }
   ProfileSnapshot next; next.profile = profile; next.ready = true; next.avatar = replace ? nullptr : previous.avatar;
   if (replace && jpeg_size) {
     int width = 0, height = 0; uint8_t* rgb = badgeDecodeAvatarJpeg(jpeg, jpeg_size, width, height);
@@ -163,9 +176,12 @@ bool save_record(const Profile& profile, const uint8_t* jpeg, size_t jpeg_size, 
     }
     badgeFreeAvatarPixels(rgb); next.avatar = std::move(pixels);
   }
-  uint8_t header[kHeader] = {}, metadata[kMetadata]; size_t length = encode(profile, metadata);
+  // Keep empty-company records readable by the previous firmware. Version 2
+  // appends one bounded field; the path, pixels, hash and atomic commit stay the same.
+  const uint16_t version = profile.company.empty() ? 1 : 2;
+  uint8_t header[kHeader] = {}, metadata[kMetadata]; size_t length = encode(profile, metadata, version);
   if (!length) { error = "Badge too large"; return false; }
-  memcpy(header, kMagic, 8); put16(header + 8, 1); put16(header + 10, kHeader); put16(header + 12, kAvatarSide); put16(header + 14, kAvatarSide);
+  memcpy(header, kMagic, 8); put16(header + 8, version); put16(header + 10, kHeader); put16(header + 12, kAvatarSide); put16(header + 14, kAvatarSide);
   put32(header + 16, length); put32(header + 20, next.avatar ? kAvatarBytes : 0);
   if (!digest(header, metadata, length, next.avatar ? next.avatar->data() : nullptr, header + 32)) { error = "Badge hash failed"; return false; }
   File file(kTemporary, "wb"); if (!file.value) { error = "Could not open badge storage"; return false; }
@@ -199,7 +215,8 @@ std::string page() {
   replace_token(html, "{{NONCE}}", session_nonce);
   replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
   replace_token(html, "{{LINKEDIN}}", escape(current.profile.urls[2])); replace_token(html, "{{X}}", escape(current.profile.urls[1]));
-  replace_token(html, "{{GITHUB}}", escape(current.profile.urls[0])); replace_token(html, "{{NAME}}", escape(current.profile.name)); return html;
+  replace_token(html, "{{GITHUB}}", escape(current.profile.urls[0])); replace_token(html, "{{COMPANY}}", escape(current.profile.company));
+  replace_token(html, "{{NAME}}", escape(current.profile.name)); return html;
 }
 const char* status_text(int status) { switch (status) { case 200: return "200 OK"; case 400: return "400 Bad Request"; case 403: return "403 Forbidden";
   case 408: return "408 Request Timeout"; case 413: return "413 Payload Too Large"; case 415: return "415 Unsupported Media Type";
@@ -228,6 +245,29 @@ bool json_fields(cJSON* root, const std::vector<const char*>& allowed) {
     for (cJSON* earlier = root->child; earlier != field; earlier = earlier->next) if (!strcmp(earlier->string, field->string)) return false;
   }
   return true;
+}
+bool profile_form(cJSON* root, const Profile& previous, Profile& candidate, std::string& error) {
+  const char* fields[] = {"name", "github", "x", "linkedin", "image", "imageToken"};
+  if (!json_fields(root, {fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], "company"})) {
+    error = "Unexpected form field."; return false;
+  }
+  for (auto field : fields) if (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(root, field))) {
+    error = "Incomplete form. Reload and try again."; return false;
+  }
+  Profile next;
+  if (!name_valid(cJSON_GetObjectItemCaseSensitive(root, "name")->valuestring, next.name)) {
+    error = "Use a name of at most 60 characters / 120 UTF-8 bytes, without control characters."; return false;
+  }
+  auto company = cJSON_GetObjectItemCaseSensitive(root, "company");
+  // A setup page opened on older firmware must not silently clear this field.
+  next.company = previous.company;
+  if (company && (!cJSON_IsString(company) || !name_valid(company->valuestring, next.company))) {
+    error = "Use a company of at most 60 characters / 120 UTF-8 bytes, without control characters."; return false;
+  }
+  for (unsigned i = 0; i < 3; ++i) if (!social_url(i, cJSON_GetObjectItemCaseSensitive(root, fields[i + 1])->valuestring, next.urls[i])) {
+    error = "Check the social handles. Use a profile handle or its HTTPS profile URL."; return false;
+  }
+  candidate = std::move(next); return true;
 }
 void finish_session(PortalOutcome result) {
   std::lock_guard<std::mutex> lock(portal_mutex); portal.outcome = result; closes_at = monotonic_ms() + 3000;
@@ -311,17 +351,14 @@ esp_err_t handle_post(httpd_req_t* req) {
     cJSON_AddStringToObject(result, "message", ok ? "Clock synchronized from this browser. Profile edits are saved separately." : "Clock sync could not be verified. Check your device time and try again.");
     auto sent = json_reply(req, ok ? 200 : 400, result); cJSON_Delete(result); return sent;
   }
-  const char* fields[] = {"name", "github", "x", "linkedin", "image", "imageToken"};
-  if (!json_fields(json.get(), {fields[0], fields[1], fields[2], fields[3], fields[4], fields[5]})) return message(req, 400, "Unexpected form field.");
-  for (auto field : fields) if (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(json.get(), field))) return message(req, 400, "Incomplete form. Reload and try again.");
+  Profile candidate; std::string error;
+  if (!profile_form(json.get(), profile_snapshot().profile, candidate, error)) return message(req, 400, error);
   auto value = [&](const char* key) { return cJSON_GetObjectItemCaseSensitive(json.get(), key)->valuestring; };
-  Profile candidate; if (!name_valid(value("name"), candidate.name)) return message(req, 400, "Use a name of at most 60 characters / 120 UTF-8 bytes, without control characters.");
-  for (unsigned i = 0; i < 3; ++i) if (!social_url(i, value(fields[i + 1]), candidate.urls[i])) return message(req, 400, "Check the social handles. Use a profile handle or its HTTPS profile URL.");
   std::string action = value("image"); bool replace = false; const uint8_t* jpeg = nullptr; size_t jpeg_size = 0;
   if (action == "remove") replace = true;
   else if (action == "staged") { if (staged_image.empty() || staged_token != value("imageToken")) return message(req, 400, "Upload your photo again before saving."); replace = true; jpeg = staged_image.data(); jpeg_size = staged_image.size(); }
   else if (action != "keep") return message(req, 400, "Invalid photo choice.");
-  std::string error; if (!save_record(candidate, jpeg, jpeg_size, replace, error)) return message(req, 500, error);
+  if (!save_record(candidate, jpeg, jpeg_size, replace, error)) return message(req, 500, error);
   auto result = message(req, 200, "Saved on your badge. You may close this page; setup Wi-Fi will turn off.");
   staged_image.clear(); staged_token.clear(); finish_session(PortalOutcome::Saved); return result;
 }

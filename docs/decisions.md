@@ -13,6 +13,14 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 design update: implement the supplied init() conference screens
+  on the existing LVGL/Smooth/Mooncake stack. Use the isolated brand marks exactly,
+  and the supplied 10-second motion clip behind the intro logo. Add optional
+  company and persistent schedule bookmarks; keep real agenda data, dynamic
+  setup credentials, saved profiles, controls and After Dark unlock. A configured
+  profile hides chrome and opens its selected social QR on tap. The event URL
+  is still pending; do not copy the mockup's sample QR destination.
+
 - September 17: make Developers After Dark a hidden Easter egg, revealed by
   entering Morse `init` on either pusher or at/after October 7, 2026, 1:30 PM
   local time. This is a fixed date/time cutoff, including later mornings on a

@@ -13,23 +13,26 @@ the conference application. No gateway changes are required.
 
 The primary pages wrap in this order, with After Dark hidden until unlocked:
 
-1. **init()**: lightweight looping wordmark/orbit preview, local clock, battery.
+1. **init()**: the supplied 10-second cross-pattern loop behind the exact init() mark.
 2. **Schedule**: vertically scrollable published init() agenda, repeating daily
    in the badge's local time. The current block says **On now**; passed blocks
    are dimmed. Times, wrapped titles and available speaker details stay visible.
-3. **Developers After Dark**: honest invite placeholder with a reserved QR area.
+3. **Developers After Dark**: the supplied invitation layout with a reserved QR area.
    Hidden initially; unlock with Morse `init` or the 1:30 PM reveal below.
    It deliberately has no scannable event destination yet.
-4. **Badge**: manual name/photo, init() brand, selected network icon/label and QR.
-   Swipe vertically through GitHub, X/Twitter and LinkedIn, including empty slots.
-5. **Hack your Badge**: real QR to `https://drop.workos.cloud/stopwatch`.
+4. **Badge**: square manual photo, name and optional company. A configured face
+   hides navigation chrome, as in the supplied design. Tap it for the selected
+   social QR (or setup for an empty account); swipe the face vertically through
+   GitHub, X/Twitter and LinkedIn, including empty slots.
+5. **Make it yours**: real QR to `https://drop.workos.cloud/stopwatch`.
 6. **Settings**: battery percentage, brightness, local date/time, phone setup,
    touch test, and orientation. All controls fit on one page; no settings
    scrolling is needed.
 
-The factory 468×466 framebuffer retains static side chevrons, top clock, bottom page
-name, and five centered dots before unlock, six afterward. Useful content and QR quiet zones remain inside the round
-aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
+The factory 468×466 framebuffer uses the supplied pixel chevrons and small init()
+mark, with five square page indicators before unlock and six afterward. There is
+no page-name footer or clock overlay. Settings retains the actual clock/battery;
+useful content and QR quiet zones remain inside the round aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
 remains editable in setup. Standard firmware fonts have limited glyph coverage.
 
 Screen-left/right pushers page backward/forward at rotations 0 and 2. In the
@@ -44,7 +47,7 @@ Schedule drag scrolling is clipped above the footer; the last row is reachable.
 Badge vertical swipes change only the network slot. The selected network is saved
 after a short debounce; primary pages start on init() at reboot. Empty accounts
 never inherit another slot's QR. Tap an empty badge to configure; tap a configured
-badge to expand/shrink its QR. Both pushers can edit any configured profile.
+badge to open its QR, then tap the QR to close it. Both pushers can edit any configured profile.
 
 Gestures dispatch on release. A drag that returns to its start is still not a
 tap. Long holds do not activate taps. Setup is modal: drags cannot change the
@@ -92,7 +95,7 @@ NVS and the UI model. Views never read the clock or storage directly.
 Brightness applies immediately in ten-percentage-point steps, bounded to 10–100%
 with a 50% default. The minimum maps to a nonzero display level. Brightness and
 orientation share one versioned NVS value in `conference_ui`; writes coalesce
-after 1.2 seconds without another change. The footer says `Saving settings...`
+after 1.2 seconds without another change. Settings says `Saving settings...` below the battery
 while pending, and a failed write stays pending with a five-second retry.
 The existing selected-network preference remains separate. Changes made just
 before power loss may not have reached the delayed save yet.
@@ -135,6 +138,34 @@ position. Titles and details wrap; row heights are based on their content.
 The older absolute-UTC helper in `firmware/devices_badge/conference_schedule.h`
 is retained only for the Arduino application and its historical tests.
 
+## September 17 supplied design implementation
+
+Native LVGL still owns labels, image assets, QR generation, scrolling, hit testing,
+buttons and animation. Smooth/Mooncake retain scene and application ownership.
+Exact logo/arrow/bookmark exports and their packaging are described in
+`firmware/factory_badge/main/ui/assets/README.md`. The intro uses LVGL's built-in
+GIF widget for a native 468×466, 60-frame, silent 10-second conversion of the
+user's loop, with a small grayscale palette. Only the intro owns the decoder;
+leaving it deletes its timer and buffers. No new video player or filesystem
+partition is introduced. See the [loop provenance](../firmware/factory_badge/main/ui/intro-loop.md)
+and [font provenance](../firmware/factory_badge/main/ui/fonts/README.md).
+
+Tap a schedule bookmark to toggle its saved state. The nine-bit selection mask
+is independent of the clock and stored in versioned `conference_ui/agenda_saved`.
+Writes coalesce after 1.2 seconds; failed writes retry after five seconds, and
+Settings indicates a pending save. Scrolling/holds cannot bookmark a row. Current
+sessions use the white stepped border and **On now**; passing time never moves
+the reader's scroll or clears bookmarks. The mockup's repeated sample sessions
+and room names are replaced by the existing published agenda, not invented data.
+
+The supplied phone/invitation QR graphics both encode the customization website.
+Phone setup continues to generate real local Wi-Fi credentials. The invitation
+keeps a truthful unscannable placeholder pending the user's actual event URL;
+its existing timed/Morse unlock is unchanged.
+
+See the [September 17 design verification](design-verification-2026-09-17.md)
+for host/device results and remaining physical checks.
+
 ## Touch alignment test
 
 Open **Settings → Touch test** to compare five white crosshair targets with the
@@ -170,7 +201,9 @@ offset to a separate authorized clock endpoint. Clock status and Retry are
 independent of Save badge. Each retry samples time again. A successful sync is
 kept even if the profile edits are cancelled; failed sync shows an error and
 does not silently save edits or close setup. See [the clock guide](conference-clock.md).
-The committed name and all three canonical profile URLs prefill the form.
+The committed name, optional company and all three canonical profile URLs prefill
+the form. Name/company each accept at most 60 Unicode codepoints / 120 UTF-8
+bytes without controls. A blank company remains blank on a configured face.
 GitHub, X/Twitter and LinkedIn personal profile handles/HTTPS URLs are accepted;
 unrelated hosts, extra paths, control characters, and excessive input are rejected.
 
@@ -201,6 +234,12 @@ The existing `ffat` partition still holds LittleFS at offset `0x610000`, length
 with versioned bounds and SHA-256. Save writes a temporary record, syncs/closes,
 reads/verifies it, then atomically renames it. RAM and form prefill update only
 after that commit. A staged image is volatile. The loader refuses corrupt records.
+
+Existing version 1 records load unchanged. A nonempty company writes version 2
+metadata with the company appended; blank-company saves use version 1. Both
+retain SHA verification, atomic replacement and the same photo/URL fields. Older
+firmware cannot read company-bearing version 2 records; clear the company on the
+new firmware before downgrading if the old reader must display the profile.
 
 Conference source never reads legacy authenticated profiles, Wi-Fi passwords,
 sessions, or pending voice receipts. Those previous records are preserved by
