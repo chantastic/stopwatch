@@ -18,10 +18,11 @@ page:
 2. **Schedule**: vertically scrollable published init() agenda, repeating daily
    in the badge's local time. The current block says **On now**; passed blocks
    are dimmed. Times, wrapped titles and available speaker details stay visible.
-3. **Developers After Dark**: the supplied invitation layout with a reserved QR area.
-   Its locked square says `tap code to reveal`; enter Morse `init` with taps/holds
-   on that square, or wait for the timed reveal below. After unlocking, it says
-   Coming soon because the actual invitation URL is still pending.
+3. **Developers After Dark**: its locked page says `tap the code to reveal a secret
+   invitation`. Enter Morse `init` by tapping/holding anywhere on the page except
+   its navigation arrows, or wait for the timed reveal below. Successful code
+   plays the intro loop once with `You're` → `Invited` → `To`, then reveals the
+   event heading. Actual invitation details remain pending the destination URL.
 4. **Badge**: square manual photo, name and optional company. A configured face
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
@@ -60,15 +61,23 @@ axis mapping/filter and stays stable throughout touch.
 ## After Dark code and timed reveal
 
 The September 17 follow-up replaces the earlier hidden page and physical-pusher
-code. After Dark now always appears in navigation, with the exact prompt
-`tap code to reveal` inside its central **156×156-pixel touch surface**.
-Only that surface on the locked page accepts `init` in Morse:
+code. After Dark always appears in navigation. The subsequent usability update
+replaces the small square target with the whole page and a prominent prompt:
+`tap the code to reveal a secret invitation`. Its navigation arrows retain their
+normal actions. The rest of the locked page accepts `init` in Morse:
 `.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Use short taps around
 150 ms, holds around 600 ms, short pauses within letters, and roughly one second
 between letters. Wait for the pause after the final hold; the same page reveals
 its invitation content. After an incorrect attempt, leave the surface untouched
 for three seconds before retrying. Physical pushers retain their normal paging
 and setup behavior and cannot enter the code.
+
+On successful code entry, the exact front-page GIF plays once behind a native
+LVGL word sequence: `You're`, `Invited`, `To` for about 700 ms each. The event
+heading then returns with `You're invited` and the pending-invitation footer.
+The ten-second loop releases its decoder/timer when finished or when the reader
+leaves; an already-unlocked page and timed reveals do not replay the code-success
+sequence. The static invitation remains until its real URL is supplied.
 
 The recognizer accepts dots of 50–349 ms and dashes of 350–1400 ms. Symbol gaps
 are 50–599 ms; letter pauses are 600–2999 ms; a whole attempt must finish within
@@ -342,6 +351,22 @@ with boolean `confirm:true` clears only the conference record. It never erases
 the filesystem, NVS, or legacy authenticated records. Do not clear attendee data
 as part of routine flashing. These diagnostics have the same physical USB trust
 boundary as application flashing.
+
+`observe_taps` has `start`, `read` and `stop` actions and requires a valid nonce.
+Start requires `duration_ms` from 1000 through 120000. It records only physical
+contacts on After Dark, outside modals, into a 64-contact RAM buffer; it is off
+by default, expires automatically and never writes storage. Reads drain at most
+eight completed contacts, with a dropped-record count. Contact records include
+sensor press/end timestamps, duration, previous-release gap, first/last displayed
+coordinates, maximum movement per axis, and release/cancellation reason. Held
+contacts at start or scope entry and USB-injected contacts are excluded. A lost,
+expired or stopped contact is labelled as such rather than as a finger release.
+Sensor polling and LVGL's separate 10 ms input cadence differ, so these records
+establish physical timing rather than the decoder's exact internal decisions.
+The response's `current_rotation` is the rotation at read time, not per-contact
+metadata; use a fixed-orientation trial when interpreting stored coordinates.
+Avoid screenshots during recording; stop after the requested trial and retain
+the bounded observations only in private `.build/` output.
 
 `after_dark_reset` is a deliberate USB-only test reset, requiring boolean
 `confirm:true` and a valid hex nonce. It writes only the locked `after_dark_v1`

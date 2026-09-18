@@ -111,6 +111,13 @@ lv_obj_t* find_image(lv_obj_t* object, const lv_image_dsc_t* source) {
     }
     return nullptr;
 }
+lv_obj_t* find_gif(lv_obj_t* object) {
+    if (lv_obj_check_type(object, &lv_gif_class)) return object;
+    for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
+        if (auto* found = find_gif(lv_obj_get_child(object, i))) return found;
+    }
+    return nullptr;
+}
 void assert_inside(lv_obj_t* child, lv_obj_t* parent) {
     lv_area_t child_area, parent_area;
     lv_obj_get_coords(child, &child_area);
@@ -226,12 +233,15 @@ int main(int argc, char** argv) {
     // Native pointer holds enter Morse only on the locked invitation. A dash
     // deliberately exceeds LVGL's ordinary long-press time.
     badge::ui_page(1); spin();
-    assert(find_label(lv_display_get_screen_active(display), "tap code to reveal"));
+    auto* invitation_prompt = find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation");
+    assert(invitation_prompt && lv_obj_get_height(invitation_prompt) <= 100);
+    assert_inside(invitation_prompt, lv_obj_get_parent(invitation_prompt));
+    assert(!find_gif(lv_display_get_screen_active(display)));
     snapshot("after-dark-locked");
     assert_idle();
-    const auto code_pulse = [](bool dash, int gap_ticks = 7) {
-        touch(234, 270, true, dash ? 30 : 8);
-        touch(234, 270, false, gap_ticks);
+    const auto code_pulse = [](bool dash, int gap_ticks = 7, int x = 234, int y = 270) {
+        touch(x, y, true, dash ? 30 : 8);
+        touch(x, y, false, gap_ticks);
     };
     const auto code_prefix = [&] {
         code_pulse(false); code_pulse(false, 40); // i
@@ -259,9 +269,22 @@ int main(int argc, char** argv) {
     assert(after_dark_unlocks == 0);
     restart_code_page();
 
-    // A contact outside the code square cancels rather than extending a word.
+    // The separate chrome arrows still navigate and discard partial words.
     code_pulse(false); code_pulse(false, 40);
-    tap(234, 100);
+    tap(434, 233);
+    assert(badge::ui_page_index() == 3);
+    tap(34, 233);
+    assert(badge::ui_page_index() == 2);
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+
+    // Full-page code input retains completed horizontal swipe navigation.
+    code_pulse(false); code_pulse(false, 40);
+    swipe(320, 390, 150, 390);
+    assert(badge::ui_page_index() == 3);
+    swipe(150, 390, 320, 390);
+    assert(badge::ui_page_index() == 2);
     code_suffix();
     assert(after_dark_unlocks == 0);
     restart_code_page();
@@ -311,8 +334,12 @@ int main(int argc, char** argv) {
     assert(after_dark_unlocks == 0);
     restart_code_page();
 
+    // Every part of the page accepts code, including heading, empty background,
+    // prompt and footer. Children and chrome decoration cannot swallow taps.
+    code_pulse(false, 7, 234, 100); code_pulse(false, 40, 234, 140); // i
+    code_pulse(true, 7, 100, 300); code_pulse(false, 40, 234, 270); // n
+    code_pulse(false, 7, 234, 370); code_pulse(false, 40, 234, 432); // i
     // Decode once, only after releasing the final dash and its letter pause.
-    code_prefix();
     touch(234, 270, true, 30);
     assert(after_dark_unlocks == 0);
     touch(234, 270, false, 28);
@@ -320,18 +347,47 @@ int main(int argc, char** argv) {
     spin(6);
     assert(after_dark_unlocks == 1 && model.after_dark_unlocked);
     assert(badge::ui_page_index() == 2 && badge::ui_page_count() == 6);
-    assert(!find_label(lv_display_get_screen_active(display), "tap code to reveal"));
-    assert(find_label(lv_display_get_screen_active(display), "Coming soon"));
+    assert(!find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
+    auto* celebration = find_gif(lv_display_get_screen_active(display));
+    assert(celebration && lv_gif_is_loaded(celebration));
+    assert(lv_gif_get_loop_count(celebration) == 1);
+    assert(find_label(lv_display_get_screen_active(display), "You're"));
+    assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
+    snapshot("after-dark-youre");
+    spin(30);
+    assert(find_label(lv_display_get_screen_active(display), "Invited"));
+    snapshot("after-dark-invited");
+    spin(30);
+    assert(find_label(lv_display_get_screen_active(display), "To"));
+    snapshot("after-dark-to");
+    spin(30);
+    assert(find_label(lv_display_get_screen_active(display), "You're invited"));
+    assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
+    assert(find_gif(lv_display_get_screen_active(display)) == celebration);
+    assert(lv_gif_get_current_frame_index(celebration) > 5);
+    snapshot("after-dark-revealed");
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 1);
+    spin(550); // One source loop finishes and releases its native decoder/timer.
+    assert(!find_gif(lv_display_get_screen_active(display)));
+    assert_idle();
     // An explicit USB relock refreshes the same page, including its completed
     // gesture latch, so the attendee can immediately try the code again.
     model.after_dark_unlocked = false;
     badge::ui_update(model); spin();
     assert(badge::ui_page_index() == 2);
-    assert(find_label(lv_display_get_screen_active(display), "tap code to reveal"));
+    assert(find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 2 && model.after_dark_unlocked);
+    assert(find_gif(lv_display_get_screen_active(display)));
+    // Leaving during the word sequence destroys both LVGL animations/timers.
+    badge::ui_page(1); spin(150);
+    assert(badge::ui_page_index() == 3);
+    assert(!find_gif(lv_display_get_screen_active(display)));
+    badge::ui_page(-1); spin();
+    assert(find_label(lv_display_get_screen_active(display), "You're invited"));
+    assert(!find_gif(lv_display_get_screen_active(display)));
+    assert_idle();
     model.after_dark_unlocked = false;
     badge::ui_update(model);
     badge::ui_page(-1); spin();
@@ -378,6 +434,7 @@ int main(int argc, char** argv) {
     badge::ui_open_after_dark(); spin();
     assert(badge::ui_page_index() == 2);
     assert(find_label(lv_display_get_screen_active(display), "After Dark"));
+    assert(!find_gif(lv_display_get_screen_active(display))); // Timed reveals do not fake a code celebration.
     snapshot("after-dark-unlocked");
     badge::ui_page(-2); spin();
 

@@ -30,14 +30,18 @@ profile snapshots hold immutable image memory. Phone clock requests are queued
 back to main, so RTC/I2C access cannot race display/input polling.
 
 After Dark retains page ID 2 and its indicator while locked; all six pages remain
-available. Its 156×156 native LVGL surface says `tap code to reveal` and measures
-touch press/release durations with the existing `MorseUnlock` helper. Long holds
-are intentional dashes on that surface. Drag, press loss, navigation, modals and
+available. Its whole-page native LVGL target says `tap the code to reveal a secret
+invitation` and measures touch press/release durations with the existing
+`MorseUnlock` helper. Chrome arrows retain navigation. Long holds
+are intentional dashes. Drag, press loss, navigation, modals and
 rotation cancel progress. A complete `init` invokes a UI callback; main owns the
 permanent `conference_ui/after_dark_v1` unlock (`0xA1`) and fixed October 7, 2026
 at 13:30 local clock policy. Ordinary pushers are only navigation/setup controls.
 The invitation stays unscannable until its real URL is supplied. This supersedes
 the earlier hidden-page/physical-pusher interaction without changing saved unlocks.
+Successful touch code uses the existing native intro GIF once behind a native
+LVGL word sequence (`You're`, `Invited`, `To`), then reveals the invitation heading.
+Page lifetime owns the decoder and animations; no second player is introduced.
 
 ## Factory baseline and deliberate adaptations
 

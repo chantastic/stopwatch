@@ -73,8 +73,10 @@
   permanent After Dark unlock and legacy records. Never exercise confirmed reset
   on a personalized device merely to test it. Use synthetic storage fixtures.
 - After Dark is always a visible page; retain all six pages/dots and stable IDs.
-  Its locked 156×156 touch surface says exactly `tap code to reveal`. Enter Morse
-  `init` (`.. -. .. -`) with taps/holds on that surface only; pushers never enter Morse.
+  Its locked page says `tap the code to reveal a secret invitation`. Enter Morse
+  `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation
+  and pushers never enter Morse. A successful code plays the existing intro GIF
+  once with `You're` → `Invited` → `To`, then reveals the invitation heading.
   Dragging more than 10 pixels, a cancelled press, navigation, modals or rotation
   cancel code entry. Long holds on this surface are Morse dashes, not ordinary
   taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,
@@ -84,6 +86,9 @@
   `docs/conference-badge.md` for timing and persistence rules.
   USB `after_dark_reset` may clear only this latch when the user explicitly asks
   to retry it; ordinary badge reset must continue to preserve it.
+  `observe_taps` is an explicit, at-most-120-second physical-contact RAM recorder,
+  limited to After Dark. Its timestamps describe sensor samples, not exact LVGL
+  decisions; keep captures/logs private and stop recording after the requested trial.
 - Settings → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.

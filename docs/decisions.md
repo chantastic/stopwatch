@@ -21,8 +21,10 @@ precedence when a later change updates these decisions.
 
 - September 17 After Dark follow-up supersedes the earlier hidden-page/pusher
   choice below: keep After Dark in navigation and show all six page indicators.
-  Its locked central square says exactly `tap code to reveal`; enter Morse
-  `init` by tapping/holding that square. Pushers retain normal navigation/setup.
+  The later usability follow-up makes the whole page a touch target with
+  `tap the code to reveal a secret invitation`; enter Morse `init` with taps/holds.
+  Chrome arrows and pushers retain navigation/setup. Successful code plays the
+  supplied intro loop once with `You're` → `Invited` → `To`, then the event heading.
   Keep the existing timing bounds, fixed October 7, 2026 at 1:30 PM local cutoff
   and permanent NVS unlock. Drag, cancelled presses, navigation, modals and rotation
   discard code progress. The actual invitation URL is still pending; after

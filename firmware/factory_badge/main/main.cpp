@@ -8,6 +8,7 @@
 #include "orientation_filter.h"
 #include "button_gesture.h"
 #include "after_dark_unlock.h"
+#include "touch_observation.h"
 #include <ArduinoJson.h>
 #include <nvs_flash.h>
 #include <nvs.h>
@@ -28,6 +29,8 @@ ConferenceSettings settings;
 OrientationFilter orientation;
 BadgeButtonGesture buttons;
 badge_after_dark::Unlock afterDark;
+badge_touch::Observation touchObservation;
+uint32_t observedTouchSequence = 0;
 badge_schedule::Bookmarks bookmarks;
 badge::UiModel model;
 badge::ProfileSnapshot profile;
@@ -146,6 +149,43 @@ void touchStatus(const char* nonce) {
     if (badge_clock::validNonce(nonce)) data["nonce"] = nonce;
     reply("TOUCH_TEST_STATUS ", data);
 }
+void observeTaps(JsonDocument& command) {
+    const char* nonce = command["nonce"] | "";
+    const char* action = command["action"] | "read";
+    if (!badge_clock::validNonce(nonce)) { line("COMMAND_REJECTED"); return; }
+    const uint32_t now = board::millis();
+    if (!strcmp(action, "start")) {
+        if (!command["duration_ms"].is<uint32_t>() || command["duration_ms"].as<uint32_t>() < 1000 ||
+            command["duration_ms"].as<uint32_t>() > badge_touch::Observation::MaxDurationMs) {
+            line("COMMAND_REJECTED"); return;
+        }
+        touchObservation.start(now, command["duration_ms"].as<uint32_t>());
+        observedTouchSequence = board::touch().sequence;
+    } else if (!strcmp(action, "stop")) touchObservation.stop(now);
+    else if (strcmp(action, "read")) { line("COMMAND_REJECTED"); return; }
+    JsonDocument result;
+    result["active"] = touchObservation.active(now);
+    result["dropped"] = touchObservation.dropped();
+    result["page"] = badge::ui_page_index(); result["current_rotation"] = board::rotation();
+    result["after_dark_unlocked"] = afterDark.unlocked();
+    result["after_dark_save_pending"] = afterDark.pending();
+    result["nonce"] = nonce;
+    auto records = result["contacts"].to<JsonArray>();
+    badge_touch::Observation::Contact contact;
+    // Drain bounded batches only on request. No serial I/O occurs on touch edges.
+    for (int i = 0; i < 8 && touchObservation.pop(contact); ++i) {
+        auto row = records.add<JsonObject>();
+        row["press_ms"] = contact.press_ms; row["release_ms"] = contact.release_ms;
+        row["duration_ms"] = contact.duration_ms;
+        if (contact.has_previous) row["gap_before_ms"] = contact.gap_before_ms;
+        row["start_x"] = contact.start_x; row["start_y"] = contact.start_y;
+        row["end_x"] = contact.end_x; row["end_y"] = contact.end_y;
+        row["max_dx"] = contact.max_dx; row["max_dy"] = contact.max_dy;
+        row["end"] = contact.reason();
+    }
+    result["remaining"] = touchObservation.count();
+    reply("TOUCH_OBSERVATION ", result);
+}
 void clockCommand(JsonDocument& command) {
     const char* op = command["op"] | "";
     const char* nonce = command["nonce"] | "";
@@ -190,6 +230,7 @@ void command(JsonDocument& data) {
     if (!strcmp(op, "clock_set") || !strcmp(op, "clock_status")) clockCommand(data);
     else if (!strcmp(op, "status")) { if (data["reset_metrics"] | false) maxLoopGap = 0; status(nonce); }
     else if (!strcmp(op, "touch_test_status")) touchStatus(nonce);
+    else if (!strcmp(op, "observe_taps")) observeTaps(data);
     else if (!strcmp(op, "page") && data["step"].is<int>() && abs(data["step"].as<int>()) == 1) {
         badge::ui_page(data["step"].as<int>()); status(nonce);
     } else if (!strcmp(op, "button")) {
@@ -432,6 +473,14 @@ extern "C" void app_main() {
         auto keys = board::buttons();
         applyButton(buttons.update(keys.yellow, keys.blue, now));
         auto contact = board::touch();
+        touchObservation.active(board::millis());
+        if (contact.sequence != observedTouchSequence) {
+            observedTouchSequence = contact.sequence;
+            const bool scope = badge::ui_page_index() == 2 && !setupRequested &&
+                !badge::ui_setup_active() && !badge::ui_touch_test_active() && !badge::ui_reset_active();
+            touchObservation.observe(scope, contact.valid, contact.pressed, contact.sensor,
+                                     contact.x, contact.y, contact.sampledAtMs);
+        }
         if (badge::ui_touch_test_active() && contact.valid && contact.sequence &&
             (contact.pressed || badge::ui_touch_state().sample))
             badge::ui_touch_sample(contact.rawX, contact.rawY, contact.x, contact.y, contact.pressed, board::rotation(), contact.sensor);
