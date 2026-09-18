@@ -13,16 +13,24 @@ ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / ".build/design-fonts"
 UI = ROOT / "firmware/factory_badge/main/ui"
 VERSION = "1.5.3"
-ROBOTO_REV = "895ec691990d041dd727c7b5afa3ce56525d98e6"
-ROBOTO_URL = f"https://raw.githubusercontent.com/googlefonts/RobotoMono/{ROBOTO_REV}"
+PLEX_REV = "78cd4223d8de9fcb78cba84eadecb269c56093c5"
+PLEX_URL = f"https://raw.githubusercontent.com/IBM/plex/{PLEX_REV}"
 INPUTS = {
-    "RobotoMono-Regular.ttf": (
-        f"{ROBOTO_URL}/fonts/ttf/RobotoMono-Regular.ttf",
-        "af0bff7599c3df3831755c16e39b3c496df74b8c8d8a1161b14dc8461be17cb4",
+    "IBMPlexMono-Regular.ttf": (
+        f"{PLEX_URL}/packages/plex-mono/fonts/complete/ttf/IBMPlexMono-Regular.ttf",
+        "7c6fbddca4b700be918f5f6183d9bd4464fa427fe435f0b480d77fe2bb8c5a43",
     ),
-    "RobotoMono-OFL.txt": (
-        f"{ROBOTO_URL}/OFL.txt",
-        "50ab8dd54680d3473f649c9db86fece88434d097c7834475c1c72d2f8c429215",
+    "IBMPlexMono-Medium.ttf": (
+        f"{PLEX_URL}/packages/plex-mono/fonts/complete/ttf/IBMPlexMono-Medium.ttf",
+        "98fbd727aae340b236955879dabed4d991aac9e8e90b3b2a67ce4a59221cc97c",
+    ),
+    "IBMPlexMono-SemiBold.ttf": (
+        f"{PLEX_URL}/packages/plex-mono/fonts/complete/ttf/IBMPlexMono-SemiBold.ttf",
+        "f04d7c488ddf7d1fa99f2574efc3406ea4cbe17bb1af3a1ab960f84d0c96a172",
+    ),
+    "IBMPlexMono-OFL.txt": (
+        f"{PLEX_URL}/LICENSE.txt",
+        "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
     ),
     "Inter-4.1.zip": (
         "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
@@ -30,9 +38,9 @@ INPUTS = {
     ),
 }
 INTER_FILES = {
-    "extras/ttf/Inter-Regular.ttf": (
-        "Inter-Regular.ttf",
-        "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
+    "extras/ttf/Inter-Medium.ttf": (
+        "Inter-Medium.ttf",
+        "97ad806f526e41546d46365bb3a393145f75b7b1568913db74549ad8b8dba872",
     ),
     "LICENSE.txt": (
         "Inter-OFL.txt",
@@ -85,15 +93,17 @@ def main():
 
     licenses = UI / "fonts"
     licenses.mkdir(parents=True, exist_ok=True)
-    for name in ("RobotoMono-OFL.txt", "Inter-OFL.txt"):
+    for name in ("IBMPlexMono-OFL.txt", "Inter-OFL.txt"):
         # Preserve the license text while removing upstream trailing spaces.
         (licenses / name).write_text("\n".join(
             line.rstrip() for line in (CACHE / name).read_text().splitlines()
         ).rstrip() + "\n")
 
-    for family, source, sizes in (
-        ("mono", "RobotoMono-Regular.ttf", (12, 18, 20, 24)),
-        ("sans", "Inter-Regular.ttf", (14, 16, 20, 24, 32)),
+    for family, source, license_family, sizes in (
+        ("mono", "IBMPlexMono-Medium.ttf", "IBMPlexMono", (12, 18, 24)),
+        ("mono", "IBMPlexMono-Regular.ttf", "IBMPlexMono", (20,)),
+        ("mono_semibold", "IBMPlexMono-SemiBold.ttf", "IBMPlexMono", (12,)),
+        ("sans", "Inter-Medium.ttf", "Inter", (12, 14, 16, 20, 24, 32)),
     ):
         for size in sizes:
             name = f"font_{family}_{size}"
@@ -109,7 +119,7 @@ def main():
             notice = (
                 "/* SPDX-License-Identifier: OFL-1.1\n"
                 " * Derived font data; upstream copyright and license: "
-                f"fonts/{'RobotoMono' if family == 'mono' else 'Inter'}-OFL.txt.\n"
+                f"fonts/{license_family}-OFL.txt.\n"
                 " * Regenerate with scripts/generate-design-fonts.py.\n */\n\n"
             )
             output.write_text(notice + output.read_text().rstrip() + "\n")

@@ -9,8 +9,8 @@ static void line(lv_obj_t* parent, int x, int y, int width, int height, lv_color
 class TouchView final : public PageView {
 public:
     TouchView(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        label(root_, "Touch test", 64, 42, 340, &lv_font_montserrat_24);
-        label(root_, "Factory sensor / LVGL coordinates", 54, 76, 360, &lv_font_montserrat_14, muted());
+        label(root_, "Touch test", 64, 42, 340, &font_sans_24);
+        label(root_, "Factory sensor / LVGL coordinates", 54, 76, 360, &font_sans_14, muted());
         constexpr int points[][2] = {{234, 120}, {234, 234}, {234, 362}, {112, 234}, {356, 234}};
         for (const auto& point : points) {
             auto* ring = container(root_, point[0] - 14, point[1] - 14, 28, 28);
@@ -20,10 +20,10 @@ public:
             line(root_, point[0] - 22, point[1], 45, 1, white());
             line(root_, point[0], point[1] - 22, 1, 45, white());
         }
-        label(root_, "White target / purple touch", 54, 167, 360, &lv_font_montserrat_14, muted());
-        pose_ = label(root_, "", 64, 190, 340, &lv_font_montserrat_14, muted());
-        coordinates_ = label(root_, "Your touch appears in purple", 54, 280, 360, &lv_font_montserrat_18, accent());
-        raw_ = label(root_, "", 54, 308, 360, &lv_font_montserrat_14, muted());
+        label(root_, "White target / purple touch", 54, 167, 360, &font_sans_14, muted());
+        pose_ = label(root_, "", 64, 190, 340, &font_sans_14, muted());
+        coordinates_ = label(root_, "Your touch appears in purple", 54, 280, 360, &font_mono_18, accent());
+        raw_ = label(root_, "", 54, 308, 360, &font_sans_14, muted());
         button(root_, "Back", 164, 399, 140, 37, [] { ui_close_touch_test(); });
         marker_ = container(root_, 0, 0, 18, 18);
         lv_obj_set_style_border_color(marker_, accent(), 0);

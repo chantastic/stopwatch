@@ -73,10 +73,16 @@ The actual After Dark invitation URL is pending. Its area is deliberately
 unscannable; the mockup's repeated customization QR is not treated as an invite.
 The real phone screen uses generated Wi-Fi credentials instead of that sample.
 
-The isolated branding shapes are exact. Inter/Roboto Mono were selected from
-the raster references; source Figma typography has not been inspected because
-the file link was unavailable. Glyph coverage remains Latin-1. The real published
-agenda replaces mock session text and room names.
+The isolated branding shapes are exact. This initial verification used
+Inter/Roboto Mono selected from raster references. The later user clarification
+specifies IBM Plex Mono Medium/SemiBold and Suisse Intl Medium, approximated by
+Inter Medium; see [current font provenance](../firmware/factory_badge/main/ui/fonts/README.md).
+Source Figma text styles were not inspected in that initial verification. The
+[source file](https://www.figma.com/design/H0uyTnXh5IkKwiZRTL7QRo/init---conf-2026?node-id=7307-612)
+was subsequently inspected in the user's logged-in Chrome Work window. Current
+font provenance records the exact source roles and native-pixel approximations.
+Glyph coverage remains Latin-1. The real published agenda replaces
+mock session text and room names.
 
 These checks do not establish physical fingertip alignment, physical panel
 refresh, a real phone's full company/photo save flow, battery runtime or

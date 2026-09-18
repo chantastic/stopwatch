@@ -7,7 +7,7 @@ class SettingsPage final : public PageView {
 public:
     SettingsPage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         label(root_, "Settings", 84, 64, 300, &font_sans_24);
-        battery_ = label(root_, "", 64, 98, 340, &font_mono_12, muted());
+        battery_ = label(root_, "", 64, 98, 340, &font_mono_semibold_12, muted());
         auto* brightness_title = label(root_, "Brightness", 87, 159, 98, &font_sans_14);
         lv_obj_set_style_text_align(brightness_title, LV_TEXT_ALIGN_LEFT, 0);
         button(root_, "-", 186, 144, 62, 44, [this] { brightness(-10); });
@@ -24,7 +24,7 @@ public:
                 if (context_.callbacks.orientation) context_.callbacks.orientation(context_.model.orientation);
                 update();
             });
-            lv_obj_set_style_text_font(lv_obj_get_child(orientation_[i], 0), &font_sans_14, 0);
+            set_font(lv_obj_get_child(orientation_[i], 0), &font_sans_12);
         }
         for (int y : {201, 273}) {
             for (int x = 87; x < 380; x += 5) {
@@ -36,7 +36,7 @@ public:
         }
         date_ = label(root_, "", 87, 291, 293, &font_sans_14);
         lv_obj_set_style_text_align(date_, LV_TEXT_ALIGN_LEFT, 0);
-        auto* hint = label(root_, "Edit badge or sync time", 87, 312, 293, &font_mono_12, muted());
+        auto* hint = label(root_, "Edit badge or sync time", 87, 312, 293, &font_mono_semibold_12, muted());
         lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_LEFT, 0);
         button(root_, "Connect Phone", 87, 339, 293, 44, [this] { request_setup(context_); });
         auto* test = button(root_, "Touch test", 110, 388, 116, 32, [] { ui_show_touch_test(); });
@@ -44,7 +44,7 @@ public:
         for (auto* control : {test, reset}) {
             lv_obj_set_style_bg_opa(control, LV_OPA_TRANSP, 0);
             auto* title = lv_obj_get_child(control, 0);
-            lv_obj_set_style_text_font(title, &font_mono_12, 0);
+            set_font(title, &font_mono_semibold_12);
             lv_obj_set_style_text_color(title, muted(), 0);
         }
         update();

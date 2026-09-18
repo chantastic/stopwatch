@@ -19,11 +19,29 @@ lv_obj_t* container(lv_obj_t* parent, int x, int y, int width, int height) {
     return object;
 }
 
+void set_font(lv_obj_t* object, const lv_font_t* font) {
+    lv_obj_set_style_text_font(object, font, 0);
+    // Figma line boxes, rounded to native display pixels. Keep native LVGL
+    // layout/rendering; padding supplies the first/last half-leading and the
+    // line-space style supplies it between wrapped lines.
+    int line_height = font->line_height;
+    if (font == &font_mono_semibold_12) line_height = 21; // Figma: 20.8 px.
+    else if (font == &font_mono_12 || font == &font_sans_12) line_height = 16;
+    else if (font == &font_mono_24) line_height = 31;
+    else if (font == &font_sans_16) line_height = 21;
+    else if (font == &font_sans_24) line_height = 33;
+    else if (font == &font_sans_32) line_height = 42;
+    const int leading = std::max(0, line_height - int(font->line_height));
+    lv_obj_set_style_pad_top(object, leading / 2, 0);
+    lv_obj_set_style_pad_bottom(object, leading - leading / 2, 0);
+    lv_obj_set_style_text_line_space(object, leading, 0);
+}
+
 lv_obj_t* label(lv_obj_t* parent, const char* text, int x, int y, int width, const lv_font_t* font, lv_color_t color) {
     auto* object = lv_label_create(parent);
     lv_obj_set_pos(object, x, y);
     lv_obj_set_width(object, width);
-    lv_obj_set_style_text_font(object, font, 0);
+    set_font(object, font);
     lv_obj_set_style_text_color(object, color, 0);
     lv_obj_set_style_text_align(object, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_long_mode(object, LV_LABEL_LONG_DOT);
@@ -109,7 +127,7 @@ lv_obj_t* qr(lv_obj_t* parent, const std::string& value, int x, int y, int size)
     lv_obj_center(code);
     if (lv_qrcode_update(code, value.data(), value.size()) != LV_RESULT_OK) {
         lv_obj_delete(code);
-        label(frame, "QR unavailable", 4, size / 2 - 8, size - 8, &lv_font_montserrat_14, lv_color_black());
+        label(frame, "QR unavailable", 4, size / 2 - 8, size - 8, &font_sans_14, lv_color_black());
     }
     return frame;
 }

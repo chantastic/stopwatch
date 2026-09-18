@@ -14,11 +14,11 @@ public:
     SetupView(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         brand(root_, 24);
         label(root_, "Connect phone", 64, 64, 340, &font_sans_24);
-        label(root_, "Scan to join this badge's Wi-Fi", 54, 98, 360, &font_mono_12, muted());
+        label(root_, "Scan to join this badge's Wi-Fi", 54, 98, 360, &font_mono_semibold_12, muted());
         code_frame_ = container(root_, 153, 135, 162, 162);
-        ssid_ = label(root_, "Starting setup...", 54, 317, 360, &font_mono_12);
-        password_ = label(root_, "", 44, 339, 380, &font_mono_12, muted());
-        status_ = label(root_, "", 54, 360, 360, &font_mono_12, muted());
+        ssid_ = label(root_, "Starting setup...", 54, 317, 360, &font_mono_semibold_12);
+        password_ = label(root_, "", 44, 339, 380, &font_mono_semibold_12, muted());
+        status_ = label(root_, "", 54, 360, 360, &font_mono_semibold_12, muted());
         button(root_, "Go back", 182, 396, 104, 44, [this] {
             if (context_.callbacks.close_setup) context_.callbacks.close_setup();
         });

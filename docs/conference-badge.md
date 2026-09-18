@@ -186,6 +186,15 @@ leaving it deletes its timer and buffers. No new video player or filesystem
 partition is introduced. See the [loop provenance](../firmware/factory_badge/main/ui/intro-loop.md)
 and [font provenance](../firmware/factory_badge/main/ui/fonts/README.md).
 
+The supplied Figma file replaces the initial raster-based font guesses: IBM
+Plex Mono Medium24 for attendee names, Regular20 for company, Medium12 for agenda
+times/details, and SemiBold12 for supporting captions. Inter Medium approximates
+Suisse Intl Medium at the source sizes, including 12px orientation options.
+Native LVGL padding and line spacing preserve the source line boxes rounded to
+whole display pixels; its integer tracking rounds -0.24px/+0.3px to zero. Fonts
+use LVGL's standard converter and native rendering, with pinned sources, weights
+and Latin-1 subsets. Exported brand marks remain images, independent of typefaces.
+
 Tap a schedule bookmark to toggle its saved state. The nine-bit selection mask
 is independent of the clock and stored in versioned `conference_ui/agenda_saved`.
 Writes coalesce after 1.2 seconds; failed writes retry after five seconds, and

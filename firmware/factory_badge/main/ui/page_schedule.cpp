@@ -73,7 +73,7 @@ class SchedulePage final : public PageView {
 public:
     SchedulePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         label(root_, "Schedule", 84, 52, 300, &font_sans_24);
-        subtitle_ = label(root_, "", 64, 87, 340, &font_mono_12, muted());
+        subtitle_ = label(root_, "", 64, 87, 340, &font_mono_semibold_12, muted());
         list_ = container(root_, 98, 126, RowWidth, 254);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);
@@ -111,7 +111,7 @@ public:
             wrapped_label(row.box, item.title, &font_sans_20, white());
             if (item.detail && item.detail[0]) wrapped_label(row.box, item.detail, &font_mono_12, muted());
         }
-        label(root_, "Swipe up or down", 84, 397, 300, &font_mono_12, muted());
+        label(root_, "Swipe up or down", 84, 394, 300, &font_mono_semibold_12, muted());
         update();
         lv_obj_update_layout(list_);
         const int current = context_.model.schedule_current;

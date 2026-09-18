@@ -13,6 +13,13 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 typography clarification: the supplied Figma file is the source
+  for text roles. Its profile names use IBM Plex Mono Medium24, company uses
+  Regular20, agenda times/details use Medium12, and supporting captions use
+  SemiBold12. Use Inter Medium for Suisse Intl Medium at its specified sizes,
+  including 12px orientation options. Preserve the supplied brand masks. Native
+  LVGL line boxes round fractional pixels; subpixel tracking rounds to zero.
+
 - September 17 orientation follow-up: new and reset badges use **Default**
   (rotation 0), applied before the first badge frame. Keep deliberately saved
   Free/180° choices, brightness and native orientation calibration intact.

@@ -41,7 +41,11 @@
   in `legacy_connected_app.h` and Git history and is not compiled into this build.
 - The September 17 supplied init() designs use exact exported brand masks in
   `main/ui/assets/` and the supplied intro clip through native LVGL GIF playback.
-  Keep these shapes intact. Company is optional manual profile data; schedule
+  Keep these shapes intact. Follow the Figma text roles in `ui/fonts/README.md`:
+  IBM Plex Mono Medium names, Regular company, Medium agenda metadata, SemiBold
+  captions, and Inter Medium for Suisse Intl Medium. Use the pinned
+  native font converter in `scripts/generate-design-fonts.py`.
+  Company is optional manual profile data; schedule
   bookmarks persist separately. A configured profile hides chrome but retains
   physical/horizontal paging and tap-to-QR. Do not substitute the mockup's sample
   QR for real phone credentials or a pending invitation destination.
