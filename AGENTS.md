@@ -54,7 +54,8 @@
 - Settings is the final page, after Hack this device. Brightness defaults to 60%
   with a visible minimum and delayed persistent saves. Display clocks use h:mm
   AM/PM; UTC storage and schedule calculations remain unchanged. Orientation is exactly Free (automatic),
-  Default (rotation 0), or 180° (rotation 2); apply changes after touch release.
+  Default (rotation 0), or 180° (rotation 2); new/reset badges use Default.
+  Preserve explicitly saved modes and apply changes after touch release.
   Phone setup synchronizes a fresh browser clock independently of profile Save
   and Cancel. Settings-launched setup returns to Settings. The published agenda
   in `factory_badge/main/schedule.h` repeats daily using the badge's local clock:

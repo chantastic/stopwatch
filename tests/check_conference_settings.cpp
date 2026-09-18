@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdio>
+#include <initializer_list>
 #include "../firmware/devices_badge/conference_settings.h"
 #include "../firmware/devices_badge/conference_touch_test.h"
 #include "../firmware/devices_badge/conference_touch_scale.h"
@@ -58,10 +59,16 @@ int main() {
   assert(outside.x<0 && outside.y>467); // No hidden edge clamp.
 
   ConferenceSettings settings, restored;
-  assert(settings.brightness == 60 && settings.automatic() && !settings.pending());
-  assert(!restored.restore(0));
-  assert(!restored.restore(0xc701030au));
-  assert(!restored.restore(0xc7010000u));
+  assert(settings.brightness == 60 && !settings.automatic() && settings.fixedRotation() == 0 && !settings.pending());
+  assert(settings.orientation == ConferenceOrientationMode::Default && settings.encoded() == 0xc701013cu);
+  for (uint32_t invalid : {0u, 0xc701030au, 0xc7010000u}) {
+    assert(!restored.restore(invalid));
+    assert(restored.brightness == 60 && restored.orientation == ConferenceOrientationMode::Default);
+    assert(restored.fixedRotation() == 0 && !restored.pending());
+  }
+  // A new default does not overwrite deliberately saved orientation choices.
+  assert(restored.restore(0xc701003cu) && restored.automatic());
+  assert(restored.restore(0xc701023cu) && restored.fixedRotation() == 2);
   for (int i=0; i<20; ++i) settings.adjustBrightness(-1, i*20);
   assert(settings.brightness == 10 && settings.displayBrightness() == 26);
   for (int i=0; i<20; ++i) settings.adjustBrightness(1, 1000+i*20);
@@ -72,6 +79,8 @@ int main() {
   assert(!settings.saveDue(600) && settings.saveDue(700));
   settings.saveFailed(700); assert(!settings.saveDue(5699) && settings.saveDue(5700));
   settings.saved();
+  assert(!settings.setOrientation(ConferenceOrientationMode::Default, 80));
+  assert(settings.setOrientation(ConferenceOrientationMode::Free, 90));
   assert(settings.setOrientation(ConferenceOrientationMode::Default, 100));
   assert(settings.fixedRotation() == 0 && !settings.automatic());
   assert(restored.restore(settings.encoded()) && restored.fixedRotation() == 0 && restored.brightness == 90 && !restored.pending());

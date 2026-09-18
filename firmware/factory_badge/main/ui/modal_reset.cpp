@@ -23,7 +23,7 @@ public:
         const bool working = state == ResetState::Working;
         const bool complete = state == ResetState::Complete;
         set_text(heading_, complete ? "Badge reset" : working ? "Resetting badge" : "Reset badge?");
-        const char* message = "Clears your name, company, photo, links and saved sessions.\n\nRestores 60% brightness and Free orientation. The clock stays set.";
+        const char* message = "Clears your name, company, photo, links and saved sessions.\n\nRestores 60% brightness and Default orientation. The clock stays set.";
         if (working) message = "Clearing your badge and saving its default settings...";
         else if (state == ResetState::Failed) message = "Your profile could not be cleared. It has been kept.\n\nTry again when setup is closed.";
         else if (state == ResetState::SettingsFailed) message = "Your profile was cleared. Some settings may have changed.\n\nTap Retry to finish the reset.";

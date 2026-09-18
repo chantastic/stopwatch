@@ -96,6 +96,7 @@ void assert_defaults() {
     ConferenceSettings defaults;
     badge_schedule::Bookmarks empty;
     assert(settings.encoded() == defaults.encoded() && !settings.pending());
+    assert(settings.orientation == ConferenceOrientationMode::Default && settings.fixedRotation() == 0);
     assert(bookmarks.mask() == 0 && !bookmarks.pending());
     assert(durable.at("prefs") == defaults.encoded());
     assert(durable.at("network") == 0 && durable.at("agenda_saved") == empty.encoded());

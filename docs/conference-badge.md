@@ -114,7 +114,7 @@ blocked; the reset view holds the current orientation.
 
 The existing service worker atomically saves an empty manual profile, clearing
 name, company, photo and social URLs. Main then writes default conference settings:
-60% brightness, Free orientation, first network and no saved agenda bookmarks.
+60% brightness, Default orientation, first network and no saved agenda bookmarks.
 The clock, permanent After Dark unlock, legacy records and partition map remain.
 This is a logical badge reset, not a secure erase or factory firmware restoration.
 
@@ -132,10 +132,18 @@ Orientation has exactly three choices: **Free** resumes calibrated automatic
 rotation in all four directions; **Default** fixes the stock rotation 0;
 **180°** fixes rotation 2, the lanyard-up pose. These fixed choices were swapped
 after the user's September 17 device feedback. Default is a named fixed pose, not the orientation
-at the moment of selection. The selected mode survives restart. Startup in Free
+at the moment of selection. New badges, missing/invalid preferences and Reset
+badge use Default, so the first badge frame boots at rotation 0. A saved mode
+survives restart, including a deliberate selection of Free or 180°. Startup in Free
 begins at rotation 2 until fresh IMU readings settle. Switching modes clears old
 filter candidates and waits until navigation and physical touch are fully
 released before rotating. Pusher direction follows the displayed orientation.
+
+September 17 verification (application SHA-256 `0cb6315b411e66a2899db1415e66a3bc9436ae8d9dadf68e76038ed49cdb8d33`):
+host checks cover new, invalid-storage and reset defaults, plus preservation of
+saved Free/180° choices. The connected badge retained Default at rotation 0 after
+restart, with its other saved state intact. No profile reset was performed on
+the personalized device. Private evidence: `.build/default-orientation-verification/`.
 
 Battery is the percentage reported by the board driver, refreshed on Settings;
 an unavailable reading is labeled honestly. No remaining runtime or charging

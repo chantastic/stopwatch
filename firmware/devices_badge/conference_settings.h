@@ -26,14 +26,15 @@ inline ConferenceSettingsAction conferenceSettingsHit(int x, int y) {
 class ConferenceSettings {
  public:
   static constexpr uint8_t MIN_BRIGHTNESS = 10, MAX_BRIGHTNESS = 100, DEFAULT_BRIGHTNESS = 60;
+  static constexpr ConferenceOrientationMode DEFAULT_ORIENTATION = ConferenceOrientationMode::Default;
   static constexpr uint32_t SAVE_DELAY_MS = 1200;
   uint8_t brightness = DEFAULT_BRIGHTNESS;
-  ConferenceOrientationMode orientation = ConferenceOrientationMode::Free;
+  ConferenceOrientationMode orientation = DEFAULT_ORIENTATION;
   bool pending() const { return dirty_; }
   uint8_t displayBrightness() const { return (uint16_t(brightness) * 255 + 50) / 100; }
   uint32_t encoded() const { return 0xc7010000u | (uint32_t(orientation) << 8) | brightness; }
   bool restore(uint32_t value) {
-    brightness = DEFAULT_BRIGHTNESS; orientation = ConferenceOrientationMode::Free; dirty_ = false;
+    brightness = DEFAULT_BRIGHTNESS; orientation = DEFAULT_ORIENTATION; dirty_ = false;
     uint8_t level = value & 255, mode = (value >> 8) & 255;
     if ((value & 0xffff0000u) != 0xc7010000u || level < MIN_BRIGHTNESS || level > MAX_BRIGHTNESS || mode > 2) return false;
     brightness = level; orientation = ConferenceOrientationMode(mode); return true;

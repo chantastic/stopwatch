@@ -13,6 +13,10 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 orientation follow-up: new and reset badges use **Default**
+  (rotation 0), applied before the first badge frame. Keep deliberately saved
+  Free/180° choices, brightness and native orientation calibration intact.
+
 - September 17 black-level follow-up: the moving intro's background is pure
   `#000000`. Correct only the shared near-black palette entry; preserve the
   supplied logo, other animation shades, motion and timing.

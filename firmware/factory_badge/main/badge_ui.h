@@ -25,7 +25,7 @@ struct UiModel {
     uint32_t profile_revision = 0;
     int battery_percent = -1;
     int brightness_percent = 60;
-    Orientation orientation = Orientation::Free;
+    Orientation orientation = Orientation::Default;
     int selected_network = 0;
     bool settings_pending = false;
     bool clock_valid = false;
