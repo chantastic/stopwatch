@@ -324,6 +324,14 @@ int main(int argc, char** argv) {
     assert(find_label(lv_display_get_screen_active(display), "Coming soon"));
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 1);
+    // An explicit USB relock refreshes the same page, including its completed
+    // gesture latch, so the attendee can immediately try the code again.
+    model.after_dark_unlocked = false;
+    badge::ui_update(model); spin();
+    assert(badge::ui_page_index() == 2);
+    assert(find_label(lv_display_get_screen_active(display), "tap code to reveal"));
+    code_prefix(); code_pulse(true, 40);
+    assert(after_dark_unlocks == 2 && model.after_dark_unlocked);
     model.after_dark_unlocked = false;
     badge::ui_update(model);
     badge::ui_page(-1); spin();

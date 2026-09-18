@@ -109,6 +109,12 @@ void ui_init(lv_display_t* target, UiCallbacks callbacks) {
     lv_display_add_event_cb(display, [](lv_event_t*) { ui_rotation_changed(); }, LV_EVENT_RESOLUTION_CHANGED, nullptr);
 }
 void ui_update(const UiModel& model) {
+    if (context.model.after_dark_unlocked && !model.after_dark_unlocked &&
+        context.page == ui::AfterDarkPage && !context.setup && !context.touch_test && !context.reset) {
+        // A deliberate USB relock must discard the completed Morse gesture.
+        context.rebuild = true;
+        pending_gesture = 0;
+    }
     context.model = model;
     if (!context.setup && !context.touch_test && !context.reset && !ui::page_visible(context.page, model)) {
         context.page = 3;

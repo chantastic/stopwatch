@@ -82,6 +82,8 @@
   NVS unlock; timed reveal must not move the current page/scroll. The actual invite
   URL remains pending, so unlocked content says Coming soon. See
   `docs/conference-badge.md` for timing and persistence rules.
+  USB `after_dark_reset` may clear only this latch when the user explicitly asks
+  to retry it; ordinary badge reset must continue to preserve it.
 - Settings → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.

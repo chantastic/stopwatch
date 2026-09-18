@@ -343,6 +343,15 @@ the filesystem, NVS, or legacy authenticated records. Do not clear attendee data
 as part of routine flashing. These diagnostics have the same physical USB trust
 boundary as application flashing.
 
+`after_dark_reset` is a deliberate USB-only test reset, requiring boolean
+`confirm:true` and a valid hex nonce. It writes only the locked `after_dark_v1`
+byte, then clears the in-memory unlock and any completed code gesture. Profile,
+bookmarks, clock and other settings remain unchanged. It refuses active modals,
+setup/reset work, or a clock already eligible for the automatic reveal; it never
+changes the clock to bypass that policy. `AFTER_DARK_RESET` reports `ok`, current
+unlock state, nonce and an error on failure. Use only when the user explicitly
+requests relocking their badge; ordinary Settings → Reset badge retains the unlock.
+
 `portal_status` reports transport counters, phases, bounded byte counts and close
 reasons, with separate last-POST evidence so captive probe GETs cannot overwrite
 it. It does not export request paths, headers, bodies, nonce or profile values.
@@ -396,8 +405,9 @@ was already unlocked, so its unlock was retained; locked code entry was verified
 in the host LVGL fixture, not with a physical finger on this badge. Public-page
 capture, USB-simulated button navigation, clock/storage readiness and offline
 radios passed. State remained unchanged during the bounded post-flash check.
-Profile/settings indicators differed from the earlier pre-task observation;
-the cause is unconfirmed, so this is not a pre/post-flash state-preservation pass.
+Profile/settings indicators differed from the earlier pre-task observation.
+The user subsequently confirmed using Settings → Reset badge to try code entry;
+that reset clears the profile/preferences while retaining the unlock.
 The upload did not write NVS or FFAT, and the new boot reported zero preference
 writes. Private evidence and the unresolved comparison are in `.build/touch-morse/`.
 

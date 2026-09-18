@@ -232,6 +232,30 @@ void command(JsonDocument& data) {
     } else if (!strcmp(op, "clear_manual_profile") && data["confirm"].is<bool>() && data["confirm"].as<bool>()) {
         if (setupRequested) { line("COMMAND_REJECTED"); return; }
         JsonDocument result; result["success"] = badge::profile_clear(); reply("CONFERENCE_CLEAR ", result);
+    } else if (!strcmp(op, "after_dark_reset")) {
+        // Deliberate USB-only test reset. Ordinary badge reset retains this
+        // latch, and no other saved preference or profile is touched here.
+        std::string error;
+        badge_after_dark::Unlock locked;
+        if (!data["confirm"].is<bool>() || !data["confirm"].as<bool>() || !badge_clock::validNonce(nonce))
+            error = "confirmation_required";
+        else if (setupRequested || resetRequested || badge::ui_setup_active() ||
+                 badge::ui_touch_test_active() || badge::ui_reset_active()) error = "busy";
+        else if (locked.updateClock(badge_clock::epoch(), badge_clock::offset(), badge_clock::valid(), board::millis()))
+            error = "timed_reveal_active";
+        else if (!preferencesReady ||
+                 nvs_set_u8(preferences, "after_dark_v1", badge_after_dark::Unlock::SavedLocked) != ESP_OK ||
+                 nvs_commit(preferences) != ESP_OK) error = "storage_write_failed";
+        if (error.empty()) {
+            afterDark.restore(badge_after_dark::Unlock::SavedLocked);
+            ++preferenceWrites;
+            refreshModel();
+        }
+        JsonDocument result;
+        result["ok"] = error.empty(); result["after_dark_unlocked"] = afterDark.unlocked();
+        if (!error.empty()) result["error"] = error;
+        if (badge_clock::validNonce(nonce)) result["nonce"] = nonce;
+        reply("AFTER_DARK_RESET ", result);
     } else if (!strcmp(op, "capture_badge") || !strcmp(op, "capture")) capture();
     else if (!strcmp(op, "reboot")) { line("CONFERENCE_REBOOT"); vTaskDelay(pdMS_TO_TICKS(50)); esp_restart(); }
     else line("COMMAND_REJECTED");

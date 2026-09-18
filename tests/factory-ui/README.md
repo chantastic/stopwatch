@@ -7,7 +7,7 @@ Address/undefined-behavior sanitizers are enabled by default.
 
 Checks cover all six pages and centered indicators while the invitation is locked
 or unlocked; the exact `tap code to reveal` prompt; native touch-Morse taps/holds,
-complete-word callbacks and cancellation on drags, press loss, page/modal changes
+complete-word callbacks, immediate code retry after an explicit relock, and cancellation on drags, press loss, page/modal changes
 and rotation; noninterrupting timed reveal during agenda scrolling/modals;
 supplied-brand chrome and square page indicators after partial redraws; no redraws on idle
 static pages; release-only buttons; drag-out-and-back, within-button drag and
