@@ -24,7 +24,7 @@ class FakeDevice:
         return self.state
 
     def page(self, target):
-        if target == 2 and self.state.get("after_dark_unlocked") is False:
+        if target == 2 and self.state.get("page_count") == 5 and self.state.get("after_dark_unlocked") is False:
             raise AssertionError("Attempted to navigate to a locked page")
         self.calls.append(("page", target))
 
@@ -48,10 +48,15 @@ class CapturePagesTests(unittest.TestCase):
         self.assertEqual(device.calls[5], ("status",))
         return captured, skipped
 
-    def test_locked_invitation_is_skipped_and_reported(self):
+    def test_older_hidden_invitation_is_skipped_and_reported(self):
         captured, skipped = self.capture({"after_dark_unlocked": False, "page_count": 5})
         self.assertEqual(captured, [0, 1, 3, 4, 5])
         self.assertEqual(skipped, [{"page": 2, "reason": "After Dark is locked"}])
+
+    def test_locked_tap_entry_page_is_captured(self):
+        captured, skipped = self.capture({"after_dark_unlocked": False, "page_count": 6})
+        self.assertEqual(captured, [0, 1, 2, 3, 4, 5])
+        self.assertEqual(skipped, [])
 
     def test_currently_unlocked_invitation_is_captured(self):
         captured, skipped = self.capture({"after_dark_unlocked": True, "page_count": 6})

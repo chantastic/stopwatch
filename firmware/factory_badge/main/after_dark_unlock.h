@@ -2,7 +2,7 @@
 #include "clock_service.h"
 #include <cstdint>
 
-// Product policy only: the main task supplies checked time, physical Morse
+// Product policy only: the main task supplies checked time, successful Morse
 // recognition and NVS persistence. No hardware or view ownership lives here.
 namespace badge_after_dark {
 // 2026-10-07 13:30 in the badge's configured local time. This is a local

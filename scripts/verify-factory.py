@@ -60,9 +60,10 @@ def capture_pages(device, out):
     require_public_profile(device.status())
     captured, skipped = [], []
     for index in range(6):
-        # Read the current reveal state: a timed reveal can happen during this
-        # run. Older factory-3 firmware has no flag and always shows page 2.
-        if index == 2 and device.status().get("after_dark_unlocked") is False:
+        # Current firmware exposes the locked tap-entry page. Retain safe
+        # navigation for the older five-page build that hid it until reveal.
+        state = device.status() if index == 2 else None
+        if state and state.get("page_count") == 5 and state.get("after_dark_unlocked") is False:
             skipped.append({"page": index, "reason": "After Dark is locked"})
             continue
         device.page(index); time.sleep(.2)

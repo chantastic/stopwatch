@@ -7,7 +7,6 @@
 #include "schedule_bookmarks.h"
 #include "orientation_filter.h"
 #include "button_gesture.h"
-#include "morse_unlock.h"
 #include "after_dark_unlock.h"
 #include <ArduinoJson.h>
 #include <nvs_flash.h>
@@ -28,7 +27,6 @@ constexpr char Build[] = "conference-factory-3";
 ConferenceSettings settings;
 OrientationFilter orientation;
 BadgeButtonGesture buttons;
-MorseUnlock morse;
 badge_after_dark::Unlock afterDark;
 badge_schedule::Bookmarks bookmarks;
 badge::UiModel model;
@@ -396,6 +394,9 @@ extern "C" void app_main() {
         if (bookmarks.toggle(index, board::millis())) refreshModel();
     };
     callbacks.reset_badge = requestReset;
+    callbacks.unlock_after_dark = [] {
+        if (afterDark.unlock(board::millis())) refreshModel();
+    };
     badge::ui_init(board::display(), std::move(callbacks));
     refreshModel();
     line("CONFERENCE_READY"); status(nullptr);
@@ -405,15 +406,7 @@ extern "C" void app_main() {
         lastLoop = now; ++loopCount;
         board::poll(); badge_clock::poll(); pollCommands();
         auto keys = board::buttons();
-        // A pusher used to leave a modal cannot also start the secret code.
-        const bool morseEnabled = !afterDark.unlocked() && !setupRequested &&
-            !badge::ui_setup_active() && !badge::ui_touch_test_active() && !badge::ui_reset_active();
-        const bool decoded = morse.update(keys.yellow, keys.blue, now, morseEnabled);
         applyButton(buttons.update(keys.yellow, keys.blue, now));
-        if (decoded && afterDark.unlock(now)) {
-            refreshModel();
-            badge::ui_open_after_dark();
-        }
         auto contact = board::touch();
         if (badge::ui_touch_test_active() && contact.valid && contact.sequence &&
             (contact.pressed || badge::ui_touch_state().sample))

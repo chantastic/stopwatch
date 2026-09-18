@@ -2,8 +2,9 @@
 
 #include <cstdint>
 
-// Observes the board's debounced physical button levels without consuming their
-// normal paging/chord actions. Use one pusher for the whole word: ".. -. .. -".
+// Recognizes a held/released input level for the whole word: ".. -. .. -".
+// The invitation view feeds its native LVGL touch surface through the first
+// input; the optional second input is still mutually exclusive for the word.
 //
 // Timings are deliberately human-sized: a tap is 50–349 ms, a dash is 350–1400
 // ms, symbols are separated by 50–599 ms, and a letter ends after 600 ms quiet.

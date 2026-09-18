@@ -44,6 +44,7 @@ struct UiCallbacks {
     std::function<void(int)> network;
     std::function<void(int)> bookmark; // Toggle this agenda item.
     std::function<void()> reset_badge; // Only after a fresh confirmation tap.
+    std::function<void()> unlock_after_dark; // Complete touch-entered Morse word.
 };
 
 struct UiTouchSample {
@@ -78,6 +79,6 @@ UiTouchSample ui_touch_state();
 bool ui_touch_test_active();
 bool ui_setup_active();
 int ui_page_index();
-int ui_page_count(); // Visible pages; stable page IDs do not change on unlock.
+int ui_page_count(); // All six pages remain visible, including the locked invite.
 
 } // namespace badge

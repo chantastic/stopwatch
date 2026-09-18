@@ -69,13 +69,16 @@
   conference profile/photo/links, bookmarks and UI preferences; retain clock,
   permanent After Dark unlock and legacy records. Never exercise confirmed reset
   on a personalized device merely to test it. Use synthetic storage fixtures.
-- After Dark is hidden from navigation and dots until either pusher enters Morse
-  `init` (`.. -. .. -`, one pusher per attempt) or valid local date/time reaches
-  October 7, 2026 at 13:30. Every later date/time qualifies, including mornings
-  on a fresh badge. Persist the reveal in its separate versioned NVS byte. Timed reveal
-  must not move the current page/scroll; code success opens the invite. Setup,
-  Touch test, reset and chords cancel recognition. Keep stable page IDs and ordinary
-  pusher paging. See `docs/conference-badge.md` for timing and persistence rules.
+- After Dark is always a visible page; retain all six pages/dots and stable IDs.
+  Its locked 156×156 touch surface says exactly `tap code to reveal`. Enter Morse
+  `init` (`.. -. .. -`) with taps/holds on that surface only; pushers never enter Morse.
+  Dragging more than 10 pixels, a cancelled press, navigation, modals or rotation
+  cancel code entry. Long holds on this surface are Morse dashes, not ordinary
+  taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,
+  including later mornings on a fresh badge. Main owns the permanent versioned
+  NVS unlock; timed reveal must not move the current page/scroll. The actual invite
+  URL remains pending, so unlocked content says Coming soon. See
+  `docs/conference-badge.md` for timing and persistence rules.
 - Settings → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.

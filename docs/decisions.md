@@ -13,6 +13,15 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 After Dark follow-up supersedes the earlier hidden-page/pusher
+  choice below: keep After Dark in navigation and show all six page indicators.
+  Its locked central square says exactly `tap code to reveal`; enter Morse
+  `init` by tapping/holding that square. Pushers retain normal navigation/setup.
+  Keep the existing timing bounds, fixed October 7, 2026 at 1:30 PM local cutoff
+  and permanent NVS unlock. Drag, cancelled presses, navigation, modals and rotation
+  discard code progress. The actual invitation URL is still pending; after
+  unlocking, show Coming soon rather than a sample destination.
+
 - September 17 typography clarification: the supplied Figma file is the source
   for text roles. Its profile names use IBM Plex Mono Medium24, company uses
   Regular20, agenda times/details use Medium12, and supporting captions use
@@ -43,7 +52,8 @@ precedence when a later change updates these decisions.
   profile hides chrome and opens its selected social QR on tap. The event URL
   is still pending; do not copy the mockup's sample QR destination.
 
-- September 17: make Developers After Dark a hidden Easter egg, revealed by
+- September 17 initial choice, superseded by the follow-up above: make Developers
+  After Dark a hidden Easter egg, revealed by
   entering Morse `init` on either pusher or at/after October 7, 2026, 1:30 PM
   local time. This is a fixed date/time cutoff, including later mornings on a
   fresh badge; only the agenda repeats daily. Either reveal persists across restart

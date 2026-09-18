@@ -11,15 +11,17 @@ the conference application. No gateway changes are required.
 
 ## Pages and controls
 
-The primary pages wrap in this order, with After Dark hidden until unlocked:
+The six primary pages always wrap in this order, including the locked After Dark
+page:
 
 1. **init()**: the supplied 10-second cross-pattern loop behind the exact init() mark.
 2. **Schedule**: vertically scrollable published init() agenda, repeating daily
    in the badge's local time. The current block says **On now**; passed blocks
    are dimmed. Times, wrapped titles and available speaker details stay visible.
 3. **Developers After Dark**: the supplied invitation layout with a reserved QR area.
-   Hidden initially; unlock with Morse `init` or the 1:30 PM reveal below.
-   It deliberately has no scannable event destination yet.
+   Its locked square says `tap code to reveal`; enter Morse `init` with taps/holds
+   on that square, or wait for the timed reveal below. After unlocking, it says
+   Coming soon because the actual invitation URL is still pending.
 4. **Badge**: square manual photo, name and optional company. A configured face
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
@@ -30,8 +32,8 @@ The primary pages wrap in this order, with After Dark hidden until unlocked:
    scrolling is needed.
 
 The factory 468×466 framebuffer uses the supplied pixel chevrons and small init()
-mark, with five square page indicators before unlock and six afterward. There is
-no page-name footer or clock overlay. Settings retains the actual clock/battery;
+mark, with six square page indicators whether the invitation is locked or
+unlocked. There is no page-name footer or clock overlay. Settings retains the actual clock/battery;
 useful content and QR quiet zones remain inside the round aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
 remains editable in setup. Standard firmware fonts have limited glyph coverage.
 
@@ -49,46 +51,58 @@ after a short debounce; primary pages start on init() at reboot. Empty accounts
 never inherit another slot's QR. Tap an empty badge to configure; tap a configured
 badge to open its QR, then tap the QR to close it. Both pushers can edit any configured profile.
 
-Gestures dispatch on release. A drag that returns to its start is still not a
-tap. Long holds do not activate taps. Setup is modal: drags cannot change the
-hidden page, network, or schedule position. Rotation uses the established IMU
+Ordinary gestures dispatch on release. A drag that returns to its start is still
+not a tap. Long holds do not activate ordinary taps; the locked After Dark code
+surface deliberately accepts them as Morse dashes. Setup is modal: drags cannot
+change the underlying page, network, or schedule position. Rotation uses the established IMU
 axis mapping/filter and stays stable throughout touch.
 
-## Secret After Dark reveal
+## After Dark code and timed reveal
 
-Use **either physical pusher for the entire word** to enter `init` in Morse:
-`.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Navigation keeps
-working while the badge listens on all primary pages. Use short taps around
+The September 17 follow-up replaces the earlier hidden page and physical-pusher
+code. After Dark now always appears in navigation, with the exact prompt
+`tap code to reveal` inside its central **156×156-pixel touch surface**.
+Only that surface on the locked page accepts `init` in Morse:
+`.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Use short taps around
 150 ms, holds around 600 ms, short pauses within letters, and roughly one second
-between letters. Wait for the pause after the final hold; the invitation opens
-automatically. After an incorrect attempt, leave both buttons alone for three
-seconds before retrying. Switching pushers mid-word or pressing both cancels.
+between letters. Wait for the pause after the final hold; the same page reveals
+its invitation content. After an incorrect attempt, leave the surface untouched
+for three seconds before retrying. Physical pushers retain their normal paging
+and setup behavior and cannot enter the code.
 
 The recognizer accepts dots of 50–349 ms and dashes of 350–1400 ms. Symbol gaps
 are 50–599 ms; letter pauses are 600–2999 ms; a whole attempt must finish within
-15 seconds. Setup and Touch test discard progress, and their exit press cannot
-start a new code. These are monotonic timers, unaffected by phone/USB clock sync.
-USB `button` actions do not represent hold durations and cannot enter Morse.
+15 seconds. A drag more than 10 pixels on either axis, lost press, navigation,
+setup, Touch test, reset or rotation discards progress. A contact already held
+when entering the page must lift before it can start a new code. Long holds are
+accepted here rather than cancelled by the ordinary completed-tap helper.
+These are monotonic timers, unaffected by phone/USB clock sync. USB `button`
+actions cannot enter Morse; simulated touch sequences exercise software behavior
+without proving physical sensor alignment.
 
 The automatic reveal has a fixed date/time cutoff: **October 7, 2026 at 1:30 PM
 in the badge's configured local time**. Any valid clock reading at or after that
 instant unlocks it, including a fresh badge first started the next morning,
 midnight, or a later date. Earlier dates never trigger it, even after 1:30 PM.
-The agenda still repeats daily; this reveal does not. An unset clock keeps it
-hidden, but Morse still works.
-The timed reveal adds the page and its dot without changing the current view,
-scroll position, or modal. Settings remains the last page. Stable internal IDs
-remain 0–5; navigation skips ID 2 until revealed.
+The agenda still repeats daily; this reveal does not. An unset clock keeps the
+invitation locked and its code surface visible, so Morse still works.
+The timed reveal changes the invitation content without changing the current
+page, scroll position, or modal. Settings remains the last page. Stable internal
+IDs remain 0–5; ID 2 and its page indicator are present before and after reveal.
 
 Either reveal latches in the separate versioned `conference_ui/after_dark_v1`
-NVS byte. It is saved promptly; failures keep the page open and retry after five
-seconds. A committed unlock survives restart, midnight, and clock corrections.
+NVS byte, with the exact unlocked value `0xA1` (`0xA0` is locked; missing or unknown
+values also stay locked). It is saved promptly; failures keep the in-memory
+invitation unlocked and retry after five seconds. A committed unlock survives
+restart, midnight, clock corrections and Settings → Reset badge.
 Ordinary reflashing preserves it. A loss of power before a successful save can
 lose a Morse unlock. This is an Easter egg, not a security boundary.
 
-The policy lives in `after_dark_unlock.h`, recognition in `morse_unlock.h`, and
-the main task connects those helpers to existing debounced board input, clock,
-NVS and the UI model. Views never read the clock or storage directly.
+The policy lives in `after_dark_unlock.h` and recognition in `morse_unlock.h`.
+The invitation view feeds native LVGL press/release durations to the recognizer
+and invokes a callback only for the complete word. Main applies the permanent
+unlock, checked clock policy, NVS writes and UI model updates. Views never read
+the wall clock or storage directly.
 
 ## Settings and current schedule item
 
@@ -205,8 +219,9 @@ and room names are replaced by the existing published agenda, not invented data.
 
 The supplied phone/invitation QR graphics both encode the customization website.
 Phone setup continues to generate real local Wi-Fi credentials. The invitation
-keeps a truthful unscannable placeholder pending the user's actual event URL;
-its existing timed/Morse unlock is unchanged.
+keeps a truthful unscannable placeholder pending the user's actual event URL.
+The visible locked code surface and permanent reveal by code or clock follow
+the current policy above.
 
 See the [September 17 design verification](design-verification-2026-09-17.md)
 for host/device results and remaining physical checks.
@@ -329,15 +344,14 @@ reasons, with separate last-POST evidence so captive probe GETs cannot overwrite
 it. It does not export request paths, headers, bodies, nonce or profile values.
 `status` includes the AP client count, without client identifiers, plus brightness,
 orientation mode, pending preference state/write count, page count, and current
-schedule index. `page_count` is the visible count; `after_dark_unlocked` and
+schedule index. `page_count` is always six; `after_dark_unlocked` and
 `after_dark_save_pending` report reveal/persistence state without user data.
 A write count is per boot and is not a flash-wear measurement.
 
-`scripts/verify-factory.py` captures the currently visible pages. It checks the
-fresh reveal state before visiting After Dark and records a locked invitation in
-`skipped_pages`, alongside the stable IDs in `captured_pages`. It never changes
-the clock or unlocks the invitation to increase capture coverage. A skipped page
-is not a verification of its invitation UI.
+`scripts/verify-factory.py` captures all six pages, including the locked invitation
+when applicable, and records their stable IDs in `captured_pages`. It never
+changes the clock or enters Morse to increase capture coverage. Ordinary page
+captures do not establish code-entry behavior or persistence.
 
 Run `scripts/test.sh` and `scripts/build.sh`. Native checks cover real LVGL
 rotation, UI input/rendering, RTC validation, and cross-version profile storage.
@@ -353,8 +367,28 @@ compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
 
-Secret invitation behavior and its host/device limits are recorded in the
-[After Dark verification report](after-dark-verification-2026-09-17.md).
+The September 17 touch-entry follow-up passed native LVGL tests with address and
+undefined-behavior sanitizers, portable Morse/reveal tests, capture-script tests,
+and the ESP32 build. Coverage includes short taps, long-press dashes, cancellation
+on movement/navigation/modals/rotation, held-finger page entry, final-letter
+silence, and exactly one unlock callback. All six pages remain available while
+locked. Application SHA-256:
+`51f57a9835f6d93cee5d201ca72b9611589ccb8b35c42251e1a89c83961c709c`.
+
+That application was flashed and verified on the development badge. The badge
+was already unlocked, so its unlock was retained; locked code entry was verified
+in the host LVGL fixture, not with a physical finger on this badge. Public-page
+capture, USB-simulated button navigation, clock/storage readiness and offline
+radios passed. State remained unchanged during the bounded post-flash check.
+Profile/settings indicators differed from the earlier pre-task observation;
+the cause is unconfirmed, so this is not a pre/post-flash state-preservation pass.
+The upload did not write NVS or FFAT, and the new boot reported zero preference
+writes. Private evidence and the unresolved comparison are in `.build/touch-morse/`.
+
+The original hidden-page/physical-pusher behavior and its host/device limits are
+recorded in the historical [After Dark verification report](after-dark-verification-2026-09-17.md).
+That report predates the visible locked page and touch-code follow-up; it is not
+verification of the new touch interaction.
 
 Current native ESP-IDF/LVGL results are in the
 [factory verification report](factory-verification-2026-09-17.md).

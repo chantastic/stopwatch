@@ -66,6 +66,7 @@ public:
         if (frame_) frame_->center();
         if (chrome_) chrome_->reflow();
         if (display) context.rotation = uint8_t(lv_display_get_rotation(display));
+        if (page_) page_->cancel_input();
     }
     void refresh() {
         if (!frame_) return;
@@ -121,8 +122,8 @@ void ui_tick(uint32_t now_ms) {
 void ui_rotation_changed() { if (app) app->reflow(); }
 void ui_page(int delta) {
     if (context.setup || context.touch_test || context.reset || delta == 0) return;
-    // IDs stay stable for setup returns and diagnostics. Only traversal skips
-    // the invitation until the controller reveals it.
+    // IDs stay stable for setup returns and diagnostics. The locked invitation
+    // is a normal page; its code surface owns the reveal interaction.
     const int steps = delta % ui::visible_page_count(context.model);
     const int direction = steps > 0 ? 1 : -1;
     for (int i = 0; i < std::abs(steps); ++i) {

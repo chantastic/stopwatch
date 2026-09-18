@@ -145,7 +145,8 @@ int main(int argc, char** argv) {
     });
 
     int brightness = 0, orientation = -1, network = -1, setup = 0;
-    int bookmarked = -1, resets = 0;
+    int bookmarked = -1, resets = 0, after_dark_unlocks = 0;
+    badge::UiModel model;
     badge::UiCallbacks callbacks;
     callbacks.brightness = [&](int value) { brightness = value; };
     callbacks.orientation = [&](badge::Orientation value) { orientation = int(value); };
@@ -154,8 +155,12 @@ int main(int argc, char** argv) {
     callbacks.network = [&](int value) { network = value; };
     callbacks.request_setup = [&] { ++setup; badge::ui_show_setup("init-test-badge", "example1234"); };
     callbacks.close_setup = [] { badge::ui_close_setup(false); };
+    callbacks.unlock_after_dark = [&] {
+        ++after_dark_unlocks;
+        model.after_dark_unlocked = true;
+        badge::ui_update(model);
+    };
     badge::ui_init(display, callbacks);
-    badge::UiModel model;
     model.clock_text = "12:34 PM";
     model.date_text = "2026-09-17 12:34 PM";
     model.clock_valid = true;
@@ -163,24 +168,129 @@ int main(int argc, char** argv) {
     badge::ui_update(model);
     spin();
 
-    // A locked invitation is absent from every navigation route and the dots.
-    assert(badge::ui_page_count() == 5);
-    assert(visible_dots(lv_display_get_layer_top(display)) == 5);
+    // The locked invitation is discoverable through every navigation route.
+    assert(badge::ui_page_count() == 6);
+    assert(visible_dots(lv_display_get_layer_top(display)) == 6);
     badge::ui_open_after_dark();
     assert(badge::ui_page_index() == 0);
-    for (int id : {1, 3, 4, 5, 0}) {
+    for (int id : {1, 2, 3, 4, 5, 0}) {
         tap(434, 233);
         assert(badge::ui_page_index() == id);
     }
-    for (int id : {5, 4, 3, 1, 0}) {
+    for (int id : {5, 4, 3, 2, 1, 0}) {
         badge::ui_button(false, -1); spin();
         assert(badge::ui_page_index() == id);
     }
     badge::ui_page(1); spin();
     swipe(320, 390, 150, 390);
-    assert(badge::ui_page_index() == 3);
+    assert(badge::ui_page_index() == 2);
     badge::ui_page(-1); spin();
     assert(badge::ui_page_index() == 1);
+
+    // Native pointer holds enter Morse only on the locked invitation. A dash
+    // deliberately exceeds LVGL's ordinary long-press time.
+    badge::ui_page(1); spin();
+    assert(find_label(lv_display_get_screen_active(display), "tap code to reveal"));
+    snapshot("after-dark-locked");
+    assert_idle();
+    const auto code_pulse = [](bool dash, int gap_ticks = 7) {
+        touch(234, 270, true, dash ? 30 : 8);
+        touch(234, 270, false, gap_ticks);
+    };
+    const auto code_prefix = [&] {
+        code_pulse(false); code_pulse(false, 40); // i
+        code_pulse(true); code_pulse(false, 40);  // n
+        code_pulse(false); code_pulse(false, 40); // i
+    };
+    const auto code_suffix = [&] {
+        code_pulse(true); code_pulse(false, 40); // n
+        code_pulse(false); code_pulse(false, 40); // i
+        code_pulse(true, 40);                    // t
+    };
+    const auto restart_code_page = [] {
+        badge::ui_page(1); spin();
+        badge::ui_page(-1); spin();
+    };
+
+    // Movement cancels the whole attempt even if the finger returns to its
+    // start point before release, so a completed suffix cannot unlock it.
+    code_pulse(false); code_pulse(false, 40);
+    touch(234, 270, true);
+    touch(246, 270, true);
+    touch(234, 270, true, 25);
+    touch(234, 270, false, 40);
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+
+    // A contact outside the code square cancels rather than extending a word.
+    code_pulse(false); code_pulse(false, 40);
+    tap(234, 100);
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+
+    // Returning through a pusher while a finger stays down requires release:
+    // the new page cannot count the tail of that contact as the first dot.
+    touch(234, 270, true);
+    badge::ui_button(false, 1); spin();
+    badge::ui_button(false, -1); spin();
+    touch(234, 270, true, 8);
+    touch(234, 270, false, 7);
+    code_pulse(false, 40);
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+
+    // Lost contact cannot leave a held symbol or partial word behind.
+    code_pulse(false); code_pulse(false, 40);
+    touch(234, 270, true);
+    lv_indev_wait_release(input);
+    touch(234, 270, false, 40);
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+
+    // Leaving the page or entering a modal discards an unfinished word.
+    code_pulse(false); code_pulse(false, 40);
+    badge::ui_button(false, 1); spin();
+    badge::ui_button(false, -1); spin();
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+    code_pulse(false); code_pulse(false, 40);
+    badge::ui_show_setup("init-test-badge", "example1234"); spin();
+    code_suffix();
+    assert(after_dark_unlocks == 0 && badge::ui_setup_active());
+    badge::ui_close_setup(false); spin();
+    code_suffix();
+    assert(after_dark_unlocks == 0 && badge::ui_page_index() == 2);
+    restart_code_page();
+
+    // Rotation is a new coordinate space and cancels the current attempt.
+    code_pulse(false); code_pulse(false, 40);
+    lv_display_set_rotation(display, LV_DISPLAY_ROTATION_180); spin();
+    lv_display_set_rotation(display, LV_DISPLAY_ROTATION_0); spin();
+    code_suffix();
+    assert(after_dark_unlocks == 0);
+    restart_code_page();
+
+    // Decode once, only after releasing the final dash and its letter pause.
+    code_prefix();
+    touch(234, 270, true, 30);
+    assert(after_dark_unlocks == 0);
+    touch(234, 270, false, 28);
+    assert(after_dark_unlocks == 0);
+    spin(6);
+    assert(after_dark_unlocks == 1 && model.after_dark_unlocked);
+    assert(badge::ui_page_index() == 2 && badge::ui_page_count() == 6);
+    assert(!find_label(lv_display_get_screen_active(display), "tap code to reveal"));
+    assert(find_label(lv_display_get_screen_active(display), "Coming soon"));
+    code_prefix(); code_pulse(true, 40);
+    assert(after_dark_unlocks == 1);
+    model.after_dark_unlocked = false;
+    badge::ui_update(model);
+    badge::ui_page(-1); spin();
 
     // A normal press-locked page contact may end over the separate chrome
     // layer: it pages once on release and cannot affect the next plain tap.
@@ -209,7 +319,7 @@ int main(int argc, char** argv) {
     tap(434, 233);
     assert(badge::ui_page_index() == 1);
 
-    // A clock reveal adds the dot/page without rebuilding the reader's agenda.
+    // A clock reveal preserves the six dots and the reader's agenda scroll.
     auto* locked_title = find_label(lv_display_get_screen_active(display), badge_schedule::Items[0].title);
     auto* locked_schedule = lv_obj_get_parent(lv_obj_get_parent(locked_title));
     swipe(234, 335, 234, 170);
@@ -228,7 +338,7 @@ int main(int argc, char** argv) {
     badge::ui_page(-2); spin();
 
     // A reveal during setup or Touch test cannot replace the modal. Stable IDs
-    // preserve Settings returns even when the visible page count changes.
+    // preserve Settings returns when the invitation changes state.
     model.after_dark_unlocked = false;
     badge::ui_update(model);
     badge::ui_page(-1); spin();
@@ -540,5 +650,5 @@ int main(int argc, char** argv) {
     lv_indev_delete(input);
     lv_display_delete(display);
     lv_deinit();
-    std::puts("PASS: native UI pages, partial rendering, idle efficiency, tap cancellation, daily schedule, scrolling, profiles and modal lifecycle");
+    std::puts("PASS: native UI pages, partial rendering, idle efficiency, tap cancellation, touch Morse, daily schedule, scrolling, profiles and modal lifecycle");
 }
