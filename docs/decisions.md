@@ -13,6 +13,12 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 reset correction: confirmed Settings → Reset badge also clears
+  the After Dark unlock and its pending save, so the code can be tried again.
+  This supersedes the original choice to keep the unlock during reset. Keep the
+  clock and legacy records; the fixed automatic reveal cutoff still applies.
+  The narrow USB relock remains available without clearing the profile.
+
 - September 17 schedule focus follow-up: center the focused event vertically
   between the navigation arrows using native LVGL scroll snapping. On entry,
   focus the current block, or the first block before the agenda/with invalid time.
@@ -26,9 +32,10 @@ precedence when a later change updates these decisions.
   Chrome arrows and pushers retain navigation/setup. Successful code plays the
   supplied intro loop once with `You're` → `Invited` → `To`, then the event heading.
   Keep the existing timing bounds, fixed October 7, 2026 at 1:30 PM local cutoff
-  and permanent NVS unlock. Drag, cancelled presses, navigation, modals and rotation
-  discard code progress. The actual invitation URL is still pending; after
-  unlocking, show Coming soon rather than a sample destination.
+  and persistent NVS unlock (cleared by confirmed badge reset). Drag, cancelled
+  presses, navigation, modals and rotation discard code progress. The actual
+  invitation URL is still pending; after unlocking, show Coming soon rather than
+  a sample destination.
 
 - September 17 typography clarification: the supplied Figma file is the source
   for text roles. Its profile names use IBM Plex Mono Medium24, company uses
@@ -48,8 +55,9 @@ precedence when a later change updates these decisions.
 - September 17 meeting follow-up: label the customization page **Hack this device.**
   with **Learn how**, default brightness to 60%, and display clocks in 12-hour
   AM/PM format. Add a deliberately confirmed badge reset that clears manual
-  attendee data/bookmarks and restores UI defaults while preserving clock and
-  After Dark unlock. Prepare and preview photos locally before portal Save, with
+  attendee data/bookmarks and restores UI defaults while preserving the clock.
+  The original reset retained After Dark; the later correction above clears it.
+  Prepare and preview photos locally before portal Save, with
   bounded failures and a normal-browser fallback for captive sign-in windows.
 
 - September 17 design update: implement the supplied init() conference screens

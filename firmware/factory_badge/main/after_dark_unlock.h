@@ -29,8 +29,8 @@ public:
     bool pending() const { return pending_; }
     uint8_t encoded() const { return unlocked_ ? SavedUnlocked : SavedLocked; }
 
-    // A reveal is permanent for this badge. Midnight, a clock correction or a
-    // later invalid RTC cannot take away a page the attendee already unlocked.
+    // A reveal persists until an explicit reset. Midnight, a clock correction
+    // or a later invalid RTC cannot take away an already unlocked invitation.
     bool unlock(uint32_t now) {
         if (unlocked_) return false;
         unlocked_ = true;

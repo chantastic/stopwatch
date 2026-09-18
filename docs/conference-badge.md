@@ -104,13 +104,15 @@ Either reveal latches in the separate versioned `conference_ui/after_dark_v1`
 NVS byte, with the exact unlocked value `0xA1` (`0xA0` is locked; missing or unknown
 values also stay locked). It is saved promptly; failures keep the in-memory
 invitation unlocked and retry after five seconds. A committed unlock survives
-restart, midnight, clock corrections and Settings → Reset badge.
-Ordinary reflashing preserves it. A loss of power before a successful save can
+restart, midnight and clock corrections. Confirmed Settings → Reset badge clears
+it, including any pending unlock save. Ordinary reflashing preserves it.
+The reset keeps the clock, so the automatic reveal still applies at or after
+the cutoff. A loss of power before a successful save can
 lose a Morse unlock. This is an Easter egg, not a security boundary.
 
 The policy lives in `after_dark_unlock.h` and recognition in `morse_unlock.h`.
 The invitation view feeds native LVGL press/release durations to the recognizer
-and invokes a callback only for the complete word. Main applies the permanent
+and invokes a callback only for the complete word. Main applies the persistent
 unlock, checked clock policy, NVS writes and UI model updates. Views never read
 the wall clock or storage directly.
 
@@ -138,8 +140,10 @@ blocked; the reset view holds the current orientation.
 
 The existing service worker atomically saves an empty manual profile, clearing
 name, company, photo and social URLs. Main then writes default conference settings:
-60% brightness, Default orientation, first network and no saved agenda bookmarks.
-The clock, permanent After Dark unlock, legacy records and partition map remain.
+60% brightness, Default orientation, first network, no saved agenda bookmarks
+and a cleared After Dark unlock. It discards any pending unlock save so it cannot
+restore the old invitation state. The clock, legacy records and partition map
+remain. A clock at or after the automatic reveal cutoff can unlock it again.
 This is a logical badge reset, not a secure erase or factory firmware restoration.
 
 A failed profile write preserves the previous record and requires an explicit
@@ -151,6 +155,17 @@ ordinary flashing or opening/cancelling the confirmation.
 
 The [meeting follow-up verification](meeting-followup-verification-2026-09-17.md)
 records reset/clock/photo tests and the preserved-data device check.
+
+September 17 reset follow-up: the production coordinator host fixture verifies
+clearing saved and pending unlocks, all four NVS key failures and commit failure,
+explicit retry, and preserved clock/legacy records. The native LVGL sanitizer
+fixture verifies the updated explanation fits and revisiting After Dark after
+reset shows its locked prompt with no event title. These are host simulations;
+the full destructive reset is not exercised on the user's badge for verification.
+The guarded flash and live open/cancel check passed with saved indicators intact,
+no preference writes, a valid clock and offline radios. Application SHA-256:
+`161924e41bd70152d40650618d0d1d4c33ea912581e0045df4a158789d8b6fee`.
+Private evidence is under `.build/reset-invitation/`.
 
 Orientation has exactly three choices: **Free** resumes calibrated automatic
 rotation in all four directions; **Default** fixes the stock rotation 0;
@@ -234,7 +249,7 @@ and room names are replaced by the existing published agenda, not invented data.
 The supplied phone/invitation QR graphics both encode the customization website.
 Phone setup continues to generate real local Wi-Fi credentials. The invitation
 keeps a truthful unscannable placeholder pending the user's actual event URL.
-The visible locked code surface and permanent reveal by code or clock follow
+The visible locked code surface and persistent reveal by code or clock follow
 the current policy above.
 
 See the [September 17 design verification](design-verification-2026-09-17.md)
@@ -376,7 +391,8 @@ bookmarks, clock and other settings remain unchanged. It refuses active modals,
 setup/reset work, or a clock already eligible for the automatic reveal; it never
 changes the clock to bypass that policy. `AFTER_DARK_RESET` reports `ok`, current
 unlock state, nonce and an error on failure. Use only when the user explicitly
-requests relocking their badge; ordinary Settings → Reset badge retains the unlock.
+requests relocking their badge without clearing their profile. Confirmed
+Settings → Reset badge also clears the unlock along with the profile and settings.
 
 `portal_status` reports transport counters, phases, bounded byte counts and close
 reasons, with separate last-POST evidence so captive probe GETs cannot overwrite
@@ -433,7 +449,8 @@ capture, USB-simulated button navigation, clock/storage readiness and offline
 radios passed. State remained unchanged during the bounded post-flash check.
 Profile/settings indicators differed from the earlier pre-task observation.
 The user subsequently confirmed using Settings → Reset badge to try code entry;
-that reset clears the profile/preferences while retaining the unlock.
+that earlier firmware cleared the profile/preferences while retaining the unlock.
+The later reset follow-up now clears the unlock too.
 The upload did not write NVS or FFAT, and the new boot reported zero preference
 writes. Private evidence and the unresolved comparison are in `.build/touch-morse/`.
 

@@ -499,6 +499,11 @@ int main(int argc, char** argv) {
     // Reset is a separate confirmation, never a Settings-row side effect.
     tap(300, 404);
     assert(badge::ui_reset_active() && resets == 0);
+    auto* reset_message = find_label(lv_display_get_screen_active(display), "Clears your profile, saved sessions and invitation unlock.\n\nRestores 60% brightness and Default orientation. The clock stays set.");
+    assert(reset_message);
+    lv_area_t reset_message_area;
+    lv_obj_get_coords(reset_message, &reset_message_area);
+    assert(reset_message_area.y2 < 294); // Explanation stays above confirmation.
     snapshot("reset-confirmation");
     badge::ui_page(1); badge::ui_open_after_dark(); spin();
     swipe(340, 245, 120, 245);
@@ -529,11 +534,20 @@ int main(int argc, char** argv) {
     tap(234, 316);
     assert(resets == 3);
     model.reset_state = badge::ResetState::Complete;
+    model.after_dark_unlocked = false;
     badge::ui_update(model); spin();
+    reset_message = find_label(lv_display_get_screen_active(display), "Your profile, saved sessions and invitation unlock are cleared.\n\nBrightness is 60%. You can configure a new badge.");
+    assert(reset_message);
+    lv_obj_get_coords(reset_message, &reset_message_area);
+    assert(reset_message_area.y2 < 352); // Completion stays above Done.
     snapshot("reset-complete");
     tap(234, 374);
     assert(!badge::ui_reset_active() && badge::ui_page_index() == 3);
-    badge::ui_page(2); spin();
+    badge::ui_page(-1); spin();
+    assert(badge::ui_page_index() == 2);
+    assert(find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
+    assert(lit_pixels(96, 72, 372, 165) == 0); // Reset cannot leave the revealed title behind.
+    badge::ui_page(3); spin();
     // Reopening is always a new confirmation even after a successful reset.
     tap(300, 404);
     assert(find_label(lv_display_get_screen_active(display), "Reset badge?"));

@@ -16,7 +16,7 @@ under `firmware/devices_badge/` for rollback reference and regression fixtures.
 | Profile/setup | `main/services.*`, `portal_page.h` | Compatible atomic records, photo decoding, temporary AP, HTTP/DNS workers |
 | Clock | `main/clock_service.*` | UTC, persisted display offset, computer/phone provisioning and RTC readback |
 | Agenda | `main/schedule.h` | Published blocks and daily local-time current/passed/upcoming rules |
-| Invitation reveal | `main/after_dark_unlock.h`, `morse_unlock.h`, `ui/page_invite.cpp` | Permanent/timed policy and bounded touch-Morse recognition on the visible locked page; main owns persistence |
+| Invitation reveal | `main/after_dark_unlock.h`, `morse_unlock.h`, `ui/page_invite.cpp` | Persistent/timed policy and bounded touch-Morse recognition on the visible locked page; main owns persistence |
 
 Views receive a `UiModel` and invoke callbacks. They must not read hardware,
 open NVS, start Wi-Fi, or write profile records. Update labels and styles in
@@ -35,8 +35,9 @@ invitation` and measures touch press/release durations with the existing
 `MorseUnlock` helper. Chrome arrows retain navigation. Long holds
 are intentional dashes. Drag, press loss, navigation, modals and
 rotation cancel progress. A complete `init` invokes a UI callback; main owns the
-permanent `conference_ui/after_dark_v1` unlock (`0xA1`) and fixed October 7, 2026
-at 13:30 local clock policy. Ordinary pushers are only navigation/setup controls.
+persistent `conference_ui/after_dark_v1` unlock (`0xA1`, cleared by confirmed badge
+reset) and fixed October 7, 2026 at 13:30 local clock policy. Ordinary pushers are
+only navigation/setup controls.
 The invitation stays unscannable until its real URL is supplied. This supersedes
 the earlier hidden-page/physical-pusher interaction without changing saved unlocks.
 Successful touch code uses the existing native intro GIF once behind a native

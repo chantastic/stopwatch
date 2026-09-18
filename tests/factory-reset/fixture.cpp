@@ -87,9 +87,7 @@ void worker_succeeds() {
     badge::current.profile = {}; badge::current.avatar.reset(); ++badge::current.revision;
     badge::result = {badge::ProfileResetState::Succeeded, {}};
 }
-void assert_preserved() {
-    assert(afterDark.unlocked());
-    assert(durable.at("after_dark_v1") == badge_after_dark::Unlock::SavedUnlocked);
+void assert_unrelated_preserved() {
     assert(durable.at("clock-offset") == 1234 && durable.at("legacy-auth") == 5678);
 }
 void assert_defaults() {
@@ -103,7 +101,9 @@ void assert_defaults() {
     assert(model.selected_network == 0 && networkSaveAt == 0);
     assert(board::applied_brightness == 60 && rotationPending);
     assert(model.reset_state == badge::ResetState::Complete && !resetRequested && !resetNeedsPreferences);
-    assert_preserved();
+    assert(!afterDark.unlocked() && !afterDark.pending() && !afterDark.saveDue(10000));
+    assert(durable.at("after_dark_v1") == badge_after_dark::Unlock::SavedLocked);
+    assert_unrelated_preserved();
 }
 int main() {
     baseline(true);
@@ -115,9 +115,22 @@ int main() {
     pollReset(); persist(2000); assert(writes.empty());
     worker_succeeds(); pollReset();
     assert_defaults();
-    assert(writes == std::vector<std::string>({"prefs", "network", "agenda_saved", "commit"}));
+    assert(writes == std::vector<std::string>({"prefs", "network", "agenda_saved", "after_dark_v1", "commit"}));
     const auto saved_writes = writes.size(); pollReset(); persist(4000);
     assert(writes.size() == saved_writes && badge::requests == 1);
+
+    // A successful reset also cancels an unlock awaiting its delayed NVS retry.
+    // It must not reappear when the old save deadline passes.
+    baseline(true);
+    afterDark.restore(badge_after_dark::Unlock::SavedLocked);
+    durable["after_dark_v1"] = badge_after_dark::Unlock::SavedLocked;
+    assert(afterDark.unlock(100)); afterDark.saveFailed(100);
+    assert(afterDark.pending() && afterDark.saveDue(5100));
+    requestReset(); persist(6000); assert(writes.empty());
+    worker_succeeds(); pollReset(); assert_defaults();
+    const auto reset_writes = writes.size(); persist(10000);
+    assert(writes.size() == reset_writes);
+    assert_defaults();
 
     // A rejected request or worker failure cannot alter preferences. Previously
     // pending user preferences resume their ordinary save path after failure.
@@ -130,10 +143,12 @@ int main() {
     persist(2000);
     assert(!settings.pending() && !bookmarks.pending() && !networkSaveAt);
     assert(durable.at("prefs") == settings.encoded() && durable.at("agenda_saved") == bookmarks.encoded());
-    assert_preserved();
+    assert(afterDark.unlocked() && !afterDark.pending());
+    assert(durable.at("after_dark_v1") == badge_after_dark::Unlock::SavedUnlocked);
+    assert_unrelated_preserved();
     baseline(); setupRequested = true; requestReset(); assert(!resetRequested && badge::requests == 0);
 
-    for (unsigned failed = 1; failed <= 4; ++failed) {
+    for (unsigned failed = 1; failed <= 5; ++failed) {
         baseline(); const auto old_settings = settings.encoded(); const auto old_marks = bookmarks.mask();
         requestReset(); worker_succeeds(); fail_operation = failed; pollReset();
         assert(!resetRequested && resetNeedsPreferences && model.reset_state == badge::ResetState::SettingsFailed);
@@ -141,7 +156,10 @@ int main() {
         assert(settings.encoded() == old_settings && bookmarks.mask() == old_marks && model.selected_network == 2);
         assert(board::brightness_calls == 0 && !rotationPending && !preferenceWrites);
         assert(writes.size() == failed); // Short-circuit after the failed operation.
-        assert_preserved();
+        assert(afterDark.unlocked() && !afterDark.pending());
+        assert(durable.at("after_dark_v1") == (failed == 5
+            ? badge_after_dark::Unlock::SavedLocked : badge_after_dark::Unlock::SavedUnlocked));
+        assert_unrelated_preserved();
         // No auto-retry or replay of the destructive worker request.
         pollReset(); persist(2000); assert(writes.size() == failed && badge::requests == 1);
         fail_operation = 0; writes.clear(); requestReset();
@@ -162,5 +180,5 @@ int main() {
     assert(badge::current.revision != failed_revision);
     pollReset(); assert(writes.empty());
     worker_succeeds(); pollReset(); assert_defaults();
-    std::puts("Reset coordinator: worker gating, partial individual NVS writes/commit failures, explicit retry, new profile guard, defaults and preserved state passed");
+    std::puts("Reset coordinator: worker gating, partial individual NVS writes/commit failures, explicit retry, new profile guard, defaults, unlock reset, pending unlock cancellation and preserved clock/legacy state passed");
 }

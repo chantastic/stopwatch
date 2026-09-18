@@ -69,8 +69,8 @@
   Clock/bookmark updates preserve the reader's position.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
-  conference profile/photo/links, bookmarks and UI preferences; retain clock,
-  permanent After Dark unlock and legacy records. Never exercise confirmed reset
+  conference profile/photo/links, bookmarks, UI preferences and After Dark unlock;
+  retain clock and legacy records. Never exercise confirmed reset
   on a personalized device merely to test it. Use synthetic storage fixtures.
 - After Dark is always a visible page; retain all six pages/dots and stable IDs.
   Its locked page hides the event name and says
@@ -81,12 +81,13 @@
   Dragging more than 10 pixels, a cancelled press, navigation, modals or rotation
   cancel code entry. Long holds on this surface are Morse dashes, not ordinary
   taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,
-  including later mornings on a fresh badge. Main owns the permanent versioned
+  including later mornings on a fresh badge. Main owns the persistent versioned
   NVS unlock; timed reveal must not move the current page/scroll. The actual invite
   URL remains pending, so unlocked content says Coming soon. See
   `docs/conference-badge.md` for timing and persistence rules.
   USB `after_dark_reset` may clear only this latch when the user explicitly asks
-  to retry it; ordinary badge reset must continue to preserve it.
+  to retry it without clearing their profile. Confirmed Reset badge also clears
+  the latch; the unchanged clock cutoff can still reveal it again when due.
   `observe_taps` is an explicit, at-most-120-second physical-contact RAM recorder,
   limited to After Dark. Its timestamps describe sensor samples, not exact LVGL
   decisions; keep captures/logs private and stop recording after the requested trial.

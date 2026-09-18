@@ -274,8 +274,8 @@ void command(JsonDocument& data) {
         if (setupRequested) { line("COMMAND_REJECTED"); return; }
         JsonDocument result; result["success"] = badge::profile_clear(); reply("CONFERENCE_CLEAR ", result);
     } else if (!strcmp(op, "after_dark_reset")) {
-        // Deliberate USB-only test reset. Ordinary badge reset retains this
-        // latch, and no other saved preference or profile is touched here.
+        // Narrow USB test reset; unlike Reset badge, this leaves the profile
+        // and all other saved preferences intact.
         std::string error;
         badge_after_dark::Unlock locked;
         if (!data["confirm"].is<bool>() || !data["confirm"].as<bool>() || !badge_clock::validNonce(nonce))
@@ -377,12 +377,14 @@ void pollReset() {
         nvs_set_u32(preferences, "prefs", defaults.encoded()) == ESP_OK &&
         nvs_set_u8(preferences, "network", 0) == ESP_OK &&
         nvs_set_u32(preferences, "agenda_saved", emptyBookmarks.encoded()) == ESP_OK &&
+        nvs_set_u8(preferences, "after_dark_v1", badge_after_dark::Unlock::SavedLocked) == ESP_OK &&
         nvs_commit(preferences) == ESP_OK;
     resetRequested = false;
     if (saved) {
         ++preferenceWrites;
         settings = defaults;
         bookmarks = emptyBookmarks;
+        afterDark.restore(badge_after_dark::Unlock::SavedLocked);
         model.selected_network = 0;
         networkSaveAt = 0;
         board::setBrightness(settings.brightness);
