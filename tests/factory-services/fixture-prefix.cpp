@@ -69,5 +69,9 @@ std::mutex data_mutex,write_mutex,portal_mutex;
 ProfileSnapshot stored;
 std::string session_nonce="0123456789abcdef0123456789abcdef";
 PortalSnapshot portal;bool requested=false,running=false;
+ProfileResetSnapshot reset_state;
+void* service_task=reinterpret_cast<void*>(1);
+std::vector<uint8_t> staged_image;
+std::string staged_token;
 #define rename checked_rename
 #define fsync checked_sync

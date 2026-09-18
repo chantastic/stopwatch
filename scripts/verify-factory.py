@@ -128,21 +128,32 @@ def main():
         report["animation"] = True
         device.page(5)
         before = device.status()
-        for x, y in ((349, 166), (234, 361), (234, 404), (352, 238)):
+        for x, y in ((349, 166), (234, 361), (168, 404), (300, 404), (352, 238)):
             device.touch("begin", x, y)
             device.touch("move", x, y - 70)
             device.touch("move", x, y)
             device.touch("end", x, y)
             time.sleep(.15)
             current = device.status()
-            assert all(current[k] == before[k] for k in ("page", "brightness_percent", "orientation_mode", "setup")), "Drag became a tap"
+            assert all(current[k] == before[k] for k in ("page", "brightness_percent", "orientation_mode", "setup", "reset_active")), "Drag became a tap"
         report["drag_rejection"] = True
+        # Opening/cancelling Reset must be safe on a personalized device. Never
+        # tap the destructive confirmation here; successful erasure uses fixtures.
+        tap(300, 404)
+        assert device.status()["reset_active"]
+        device.capture(out / "reset-confirmation.png")
+        device.action({"op": "button", "value": "blue"})
+        cancelled = device.status()
+        assert not cancelled["reset_active"] and cancelled["page"] == 5
+        for key in ("configured_mask", "avatar", "name_present", "company_present", "schedule_bookmarks"):
+            assert cancelled[key] == original[key], key
+        report["reset_confirmation_cancel_preserves_data"] = True
         set_brightness(60 if original["brightness_percent"] != 60 else 50)
         settle()
         set_brightness(original["brightness_percent"])
         for name, rotation in (("Default", 0), ("180°", 2)):
             set_orientation(name); settle()
-            tap(234, 404)
+            tap(168, 404)
             device.send({"op": "touch_test_status"})
             state = json.loads(device.response(b"TOUCH_TEST_STATUS "))
             assert state["active"] and state["rotation"] == rotation
@@ -171,7 +182,7 @@ def main():
         for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "name_present", "company_present", "store_ready", "schedule_bookmarks"):
             assert restored[key] == original[key], key
         report["restart_restoration"] = True
-        device.page(5); tap(234, 404)
+        device.page(5); tap(168, 404)
         device.send({"op": "touch_test_status"})
         report["final_touch_test"] = json.loads(device.response(b"TOUCH_TEST_STATUS "))
         assert report["final_touch_test"]["active"]

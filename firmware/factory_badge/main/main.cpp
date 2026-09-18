@@ -36,6 +36,8 @@ badge::ProfileSnapshot profile;
 nvs_handle_t preferences;
 bool preferencesReady = false, rotationPending = false;
 bool setupRequested = false;
+bool resetRequested = false, resetNeedsPreferences = false;
+uint32_t resetProfileRevision = 0;
 uint32_t preferenceWrites = 0, networkSaveAt = 0, lastImu = 0, lastModel = 0;
 uint32_t loopCount = 0, inputCount = 0, maxLoopGap = 0, lastLoop = 0;
 std::string serialLine;
@@ -57,7 +59,7 @@ void reply(const char* prefix, const JsonDocument& json) {
     writeBytes(prefix, strlen(prefix)); writeBytes(body.data(), body.size()); writeBytes("\n", 1);
 }
 void startSetup(const char* password = nullptr) {
-    if (setupRequested || badge::ui_touch_test_active()) return;
+    if (setupRequested || badge::ui_touch_test_active() || badge::ui_reset_active()) return;
     if (badge::portal_start(password)) {
         setupRequested = true;
         badge::ui_show_setup("", "", "192.168.4.1", "Starting setup...");
@@ -120,6 +122,8 @@ void status(const char* nonce) {
     data["schedule_bookmarks"] = bookmarks.mask();
     data["bookmarks_pending"] = bookmarks.pending();
     data["design"] = "init-2026";
+    data["reset_active"] = badge::ui_reset_active();
+    data["reset_state"] = int(model.reset_state);
     data["name_present"] = !saved.profile.name.empty(); data["store_ready"] = saved.ready;
     data["setup"] = setupRequested || portal.active || portal.starting;
     data["wifi_mode"] = int(wifi); data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
@@ -212,7 +216,7 @@ void command(JsonDocument& data) {
         size_t size = strlen(password);
         bool accepted = size >= 12 && size <= 32;
         for (size_t i = 0; i < size; ++i) if (!isalnum(static_cast<unsigned char>(password[i]))) accepted = false;
-        if (!accepted || setupRequested || badge::ui_touch_test_active()) { line("COMMAND_REJECTED"); return; }
+        if (!accepted || setupRequested || badge::ui_touch_test_active() || badge::ui_reset_active()) { line("COMMAND_REJECTED"); return; }
         startSetup(password);
         line("CONFERENCE_SETUP {\"starting\":true}");
     } else if (!strcmp(op, "portal_status")) {
@@ -252,6 +256,9 @@ void pollCommands() {
     }
 }
 void persist(uint32_t now) {
+    // A reset writes its own defaults after the profile worker succeeds.
+    // Do not interleave an older debounced preference write with that commit.
+    if (resetRequested) return;
     if (bookmarks.saveDue(now)) {
         if (preferencesReady && nvs_set_u32(preferences, "agenda_saved", bookmarks.encoded()) == ESP_OK && nvs_commit(preferences) == ESP_OK) {
             ++preferenceWrites; bookmarks.saved();
@@ -272,8 +279,62 @@ void persist(uint32_t now) {
         networkSaveAt = saved ? 0 : now + 5000;
     }
 }
+void requestReset() {
+    if (resetRequested || setupRequested) return;
+    model.reset_state = badge::ResetState::Working;
+    // Retry only the unfinished settings step while the cleared profile is
+    // unchanged. A newly configured profile requires a new confirmed reset.
+    if (resetNeedsPreferences && badge::profile_snapshot().revision == resetProfileRevision) {
+        resetRequested = true;
+    } else {
+        resetNeedsPreferences = false;
+        std::string error;
+        resetRequested = badge::profile_reset_request(error);
+        if (!resetRequested) model.reset_state = badge::ResetState::Failed;
+    }
+    refreshModel();
+}
+void pollReset() {
+    if (!resetRequested) return;
+    if (!resetNeedsPreferences) {
+        auto result = badge::profile_reset_snapshot();
+        if (result.state == badge::ProfileResetState::Pending || result.state == badge::ProfileResetState::Running) return;
+        if (result.state != badge::ProfileResetState::Succeeded) {
+            resetRequested = false;
+            model.reset_state = badge::ResetState::Failed;
+            refreshModel();
+            return;
+        }
+        resetNeedsPreferences = true;
+        resetProfileRevision = badge::profile_snapshot().revision;
+    }
+    ConferenceSettings defaults;
+    badge_schedule::Bookmarks emptyBookmarks;
+    const bool saved = preferencesReady &&
+        nvs_set_u32(preferences, "prefs", defaults.encoded()) == ESP_OK &&
+        nvs_set_u8(preferences, "network", 0) == ESP_OK &&
+        nvs_set_u32(preferences, "agenda_saved", emptyBookmarks.encoded()) == ESP_OK &&
+        nvs_commit(preferences) == ESP_OK;
+    resetRequested = false;
+    if (saved) {
+        ++preferenceWrites;
+        settings = defaults;
+        bookmarks = emptyBookmarks;
+        model.selected_network = 0;
+        networkSaveAt = 0;
+        board::setBrightness(settings.brightness);
+        rotationPending = true;
+        resetNeedsPreferences = false;
+        model.reset_state = badge::ResetState::Complete;
+    } else {
+        // The profile is already cleared. Keep that partial outcome explicit;
+        // do not claim success or automatically repeat a destructive request.
+        model.reset_state = badge::ResetState::SettingsFailed;
+    }
+    refreshModel();
+}
 void pollOrientation(uint32_t now) {
-    if (badge::ui_touch_test_active()) return;
+    if (badge::ui_touch_test_active() || badge::ui_reset_active()) return;
     bool touching = board::touch().pressed;
     if (rotationPending && !touching) {
         uint8_t next = settings.automatic() ? board::rotation() : settings.fixedRotation();
@@ -334,6 +395,7 @@ extern "C" void app_main() {
     callbacks.bookmark = [](int index) {
         if (bookmarks.toggle(index, board::millis())) refreshModel();
     };
+    callbacks.reset_badge = requestReset;
     badge::ui_init(board::display(), std::move(callbacks));
     refreshModel();
     line("CONFERENCE_READY"); status(nullptr);
@@ -345,7 +407,7 @@ extern "C" void app_main() {
         auto keys = board::buttons();
         // A pusher used to leave a modal cannot also start the secret code.
         const bool morseEnabled = !afterDark.unlocked() && !setupRequested &&
-            !badge::ui_setup_active() && !badge::ui_touch_test_active();
+            !badge::ui_setup_active() && !badge::ui_touch_test_active() && !badge::ui_reset_active();
         const bool decoded = morse.update(keys.yellow, keys.blue, now, morseEnabled);
         applyButton(buttons.update(keys.yellow, keys.blue, now));
         if (decoded && afterDark.unlock(now)) {
@@ -356,7 +418,7 @@ extern "C" void app_main() {
         if (badge::ui_touch_test_active() && contact.valid && contact.sequence &&
             (contact.pressed || badge::ui_touch_state().sample))
             badge::ui_touch_sample(contact.rawX, contact.rawY, contact.x, contact.y, contact.pressed, board::rotation(), contact.sensor);
-        pollOrientation(now); persist(now);
+        pollOrientation(now); pollReset(); persist(now);
         auto portal = badge::portal_snapshot();
         if (setupRequested) {
             if (portal.active || portal.starting) badge::ui_show_setup(portal.ssid, portal.password, "192.168.4.1",

@@ -9,6 +9,7 @@
 namespace badge {
 
 enum class Orientation : uint8_t { Free, Default, UpsideDown };
+enum class ResetState : uint8_t { Ready, Working, Failed, SettingsFailed, Complete };
 
 // The main task owns this model and all UI calls. Avatar memory must remain valid
 // until the next ui_update(), including while LVGL renders the current frame.
@@ -23,7 +24,7 @@ struct UiModel {
     uint16_t avatar_height = 0;
     uint32_t profile_revision = 0;
     int battery_percent = -1;
-    int brightness_percent = 50;
+    int brightness_percent = 60;
     Orientation orientation = Orientation::Free;
     int selected_network = 0;
     bool settings_pending = false;
@@ -32,6 +33,7 @@ struct UiModel {
     int schedule_minute = -1; // Local minute of day; -1 when the clock is unset.
     int schedule_current = -1;
     uint16_t schedule_bookmarks = 0;
+    ResetState reset_state = ResetState::Ready;
 };
 
 struct UiCallbacks {
@@ -41,6 +43,7 @@ struct UiCallbacks {
     std::function<void(Orientation)> orientation;
     std::function<void(int)> network;
     std::function<void(int)> bookmark; // Toggle this agenda item.
+    std::function<void()> reset_badge; // Only after a fresh confirmation tap.
 };
 
 struct UiTouchSample {
@@ -66,6 +69,9 @@ void ui_show_setup(const std::string& ssid, const std::string& password,
 void ui_close_setup(bool saved);
 void ui_show_touch_test();
 void ui_close_touch_test();
+void ui_show_reset();
+void ui_close_reset();
+bool ui_reset_active();
 void ui_touch_sample(int raw_x, int raw_y, int x, int y, bool pressed,
                      uint8_t rotation, bool sensor = true);
 UiTouchSample ui_touch_state();

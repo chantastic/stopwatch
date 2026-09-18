@@ -39,18 +39,21 @@ public:
         auto* hint = label(root_, "Edit badge or sync time", 87, 312, 293, &font_mono_12, muted());
         lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_LEFT, 0);
         button(root_, "Connect Phone", 87, 339, 293, 44, [this] { request_setup(context_); });
-        auto* test = button(root_, "Touch test", 174, 388, 120, 32, [] { ui_show_touch_test(); });
-        lv_obj_set_style_bg_opa(test, LV_OPA_TRANSP, 0);
-        auto* title = lv_obj_get_child(test, 0);
-        lv_obj_set_style_text_font(title, &font_mono_12, 0);
-        lv_obj_set_style_text_color(title, muted(), 0);
+        auto* test = button(root_, "Touch test", 110, 388, 116, 32, [] { ui_show_touch_test(); });
+        auto* reset = button(root_, "Reset badge", 242, 388, 116, 32, [] { ui_show_reset(); });
+        for (auto* control : {test, reset}) {
+            lv_obj_set_style_bg_opa(control, LV_OPA_TRANSP, 0);
+            auto* title = lv_obj_get_child(control, 0);
+            lv_obj_set_style_text_font(title, &font_mono_12, 0);
+            lv_obj_set_style_text_color(title, muted(), 0);
+        }
         update();
     }
     void update() override {
         set_text(battery_, battery_text(context_.model.battery_percent));
         set_text(brightness_, std::to_string(context_.model.brightness_percent) + "%");
         auto date = context_.model.date_text;
-        if (date.size() == 16 && date[10] == ' ') date.replace(10, 1, " | ");
+        if (date.size() > 10 && date[10] == ' ') date.replace(10, 1, " | ");
         set_text(date_, context_.model.clock_valid ? date : "Date / time not set");
         if (orientation_value_ != int(context_.model.orientation)) {
             orientation_value_ = int(context_.model.orientation);

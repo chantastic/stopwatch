@@ -58,7 +58,7 @@ int main() {
   assert(outside.x<0 && outside.y>467); // No hidden edge clamp.
 
   ConferenceSettings settings, restored;
-  assert(settings.brightness == 50 && settings.automatic() && !settings.pending());
+  assert(settings.brightness == 60 && settings.automatic() && !settings.pending());
   assert(!restored.restore(0));
   assert(!restored.restore(0xc701030au));
   assert(!restored.restore(0xc7010000u));

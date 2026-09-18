@@ -11,8 +11,8 @@ bool valid();
 int64_t epoch();
 int offset();
 const char* source();
-std::string timeText();
-std::string dateText();
+std::string timeText(); // Local h:mm AM/PM; --:-- while invalid.
+std::string dateText(); // Local YYYY-MM-DD h:mm AM/PM; placeholder while invalid.
 // Main-task call; checks RTC write/readback, NVS offset and system time.
 bool set(int64_t epoch, int offset, const char* source, std::string& error);
 // HTTP-task call; marshals to main so all I2C and clock state have one owner.

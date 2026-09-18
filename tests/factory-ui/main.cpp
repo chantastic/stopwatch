@@ -137,18 +137,19 @@ int main(int argc, char** argv) {
     });
 
     int brightness = 0, orientation = -1, network = -1, setup = 0;
-    int bookmarked = -1;
+    int bookmarked = -1, resets = 0;
     badge::UiCallbacks callbacks;
     callbacks.brightness = [&](int value) { brightness = value; };
     callbacks.orientation = [&](badge::Orientation value) { orientation = int(value); };
     callbacks.bookmark = [&](int index) { bookmarked = index; };
+    callbacks.reset_badge = [&] { ++resets; };
     callbacks.network = [&](int value) { network = value; };
     callbacks.request_setup = [&] { ++setup; badge::ui_show_setup("init-test-badge", "example1234"); };
     callbacks.close_setup = [] { badge::ui_close_setup(false); };
     badge::ui_init(display, callbacks);
     badge::UiModel model;
-    model.clock_text = "12:34";
-    model.date_text = "2026-09-17 12:34";
+    model.clock_text = "12:34 PM";
+    model.date_text = "2026-09-17 12:34 PM";
     model.clock_valid = true;
     model.battery_percent = 74;
     badge::ui_update(model);
@@ -263,11 +264,58 @@ int main(int argc, char** argv) {
     touch(342, 177, false, 6);
     assert(brightness == 0);
     tap(342, 177);
-    assert(brightness == 60);
+    assert(brightness == 70);
     tap(350, 238);
     assert(orientation == 2);
 
-    tap(234, 404);
+    auto* shown_date = find_label(lv_display_get_screen_active(display), "2026-09-17 | 12:34 PM");
+    assert(shown_date);
+    assert_inside(shown_date, lv_obj_get_parent(shown_date));
+    // Reset is a separate confirmation, never a Settings-row side effect.
+    tap(300, 404);
+    assert(badge::ui_reset_active() && resets == 0);
+    snapshot("reset-confirmation");
+    badge::ui_page(1); badge::ui_open_after_dark(); spin();
+    swipe(340, 245, 120, 245);
+    assert(badge::ui_reset_active() && badge::ui_page_index() == 5);
+    touch(234, 316, true); touch(234, 240, true); touch(234, 316, true); touch(234, 316, false);
+    touch(234, 316, true, 40); touch(234, 316, false);
+    assert(resets == 0);
+    tap(234, 374);
+    assert(!badge::ui_reset_active() && resets == 0);
+    tap(300, 404);
+    touch(234, 316, true);
+    assert(resets == 0); // Press alone cannot erase anything.
+    touch(234, 316, false);
+    assert(resets == 1 && badge::ui_reset_active());
+    badge::ui_button(true, 1); badge::ui_button(false, 1); spin();
+    tap(234, 316);
+    assert(badge::ui_reset_active() && resets == 1 && setup == 0);
+    model.reset_state = badge::ResetState::Failed;
+    badge::ui_update(model); spin();
+    assert(find_label(lv_display_get_screen_active(display), "Retry"));
+    snapshot("reset-failed");
+    tap(234, 316);
+    assert(resets == 2);
+    model.reset_state = badge::ResetState::SettingsFailed;
+    badge::ui_update(model); spin();
+    assert(find_label(lv_display_get_screen_active(display), "Your profile was cleared. Some settings may have changed.\n\nTap Retry to finish the reset."));
+    snapshot("reset-settings-failed");
+    tap(234, 316);
+    assert(resets == 3);
+    model.reset_state = badge::ResetState::Complete;
+    badge::ui_update(model); spin();
+    snapshot("reset-complete");
+    tap(234, 374);
+    assert(!badge::ui_reset_active() && badge::ui_page_index() == 3);
+    badge::ui_page(2); spin();
+    // Reopening is always a new confirmation even after a successful reset.
+    tap(300, 404);
+    assert(find_label(lv_display_get_screen_active(display), "Reset badge?"));
+    badge::ui_button(false, -1); spin();
+    assert(!badge::ui_reset_active() && badge::ui_page_index() == 5 && resets == 3);
+
+    tap(168, 404);
     assert(badge::ui_touch_test_active());
     badge::ui_touch_sample(234, 234, 234, 234, true, 0);
     snapshot("touch");
@@ -283,7 +331,7 @@ int main(int argc, char** argv) {
 
     // Opening the real agenda focuses the active session once. Past sessions
     // dim, upcoming sessions stay readable, and full titles/details wrap.
-    model.clock_text = "09:45";
+    model.clock_text = "9:45 AM";
     model.schedule_minute = 9 * 60 + 45;
     model.schedule_current = badge_schedule::current(model.schedule_minute);
     badge::ui_update(model);
@@ -343,7 +391,7 @@ int main(int argc, char** argv) {
 
     // A new session updates existing widgets without moving the attendee's
     // chosen scroll position or changing row heights.
-    model.clock_text = "11:02";
+    model.clock_text = "11:02 AM";
     model.schedule_minute = 11 * 60 + 2;
     model.schedule_current = badge_schedule::current(model.schedule_minute);
     badge::ui_update(model);
@@ -376,7 +424,7 @@ int main(int argc, char** argv) {
     assert(lv_obj_get_scroll_y(schedule) == user_scroll);
     snapshot("schedule-invalid-time");
     model.clock_valid = true;
-    model.clock_text = "23:59";
+    model.clock_text = "11:59 PM";
     model.schedule_minute = 23 * 60 + 59;
     model.schedule_current = badge_schedule::current(model.schedule_minute);
     badge::ui_update(model);
@@ -391,7 +439,7 @@ int main(int argc, char** argv) {
     const int last_entry_scroll = lv_obj_get_scroll_y(schedule);
     assert_chrome();
     snapshot("schedule-last-session");
-    model.clock_text = "00:00";
+    model.clock_text = "12:00 AM";
     model.schedule_minute = 0; // The published agenda repeats on the next local day.
     model.schedule_current = -1;
     badge::ui_update(model);

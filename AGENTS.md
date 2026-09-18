@@ -51,20 +51,25 @@
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
   loop-up rotation 2 means blue previous / yellow next. Both open setup; either
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
-- Settings is the final page, after Hack your Badge. Brightness has a visible
-  minimum and delayed persistent saves. Orientation is exactly Free (automatic),
+- Settings is the final page, after Hack this device. Brightness defaults to 60%
+  with a visible minimum and delayed persistent saves. Display clocks use h:mm
+  AM/PM; UTC storage and schedule calculations remain unchanged. Orientation is exactly Free (automatic),
   Default (rotation 0), or 180° (rotation 2); apply changes after touch release.
   Phone setup synchronizes a fresh browser clock independently of profile Save
   and Cancel. Settings-launched setup returns to Settings. The published agenda
   in `factory_badge/main/schedule.h` repeats daily using the badge's local clock:
   current rows say On now, passed rows are dimmed, and invalid time marks neither.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
+- Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
+  conference profile/photo/links, bookmarks and UI preferences; retain clock,
+  permanent After Dark unlock and legacy records. Never exercise confirmed reset
+  on a personalized device merely to test it. Use synthetic storage fixtures.
 - After Dark is hidden from navigation and dots until either pusher enters Morse
   `init` (`.. -. .. -`, one pusher per attempt) or valid local date/time reaches
   October 7, 2026 at 13:30. Every later date/time qualifies, including mornings
   on a fresh badge. Persist the reveal in its separate versioned NVS byte. Timed reveal
   must not move the current page/scroll; code success opens the invite. Setup,
-  Touch test and chords cancel recognition. Keep stable page IDs and ordinary
+  Touch test, reset and chords cancel recognition. Keep stable page IDs and ordinary
   pusher paging. See `docs/conference-badge.md` for timing and persistence rules.
 - Settings → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen

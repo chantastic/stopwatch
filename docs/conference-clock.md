@@ -12,7 +12,9 @@ and sets the ESP32 system clock from it on boot. The display adds a saved UTC
 offset. It can adopt the flashing computer's clock over USB or the phone/browser
 clock through its temporary local setup portal. There is no internet time
 service, compile-time clock, or saved timestamp used to guess elapsed time after
-power loss. An invalid clock displays `--:--`.
+power loss. Visible times use **12-hour `h:mm AM/PM`**, with no leading zero on
+the hour: midnight is `12:00 AM` and noon is `12:00 PM`. An invalid clock displays
+`--:--`.
 
 ## Phone synchronization and Settings
 
@@ -47,14 +49,18 @@ The last successful source is `phone` during that boot; a later reboot reports
 `rtc` after restoring the retained clock. Repeated synchronization with the same
 offset does not rewrite that NVS value.
 
-Settings reads the shared local-time helpers: `conferenceClockText()` (`HH:MM`),
-`conferenceClockDateText()` (`YYYY-MM-DD`), and
-`conferenceClockDateTimeText()` (`YYYY-MM-DD HH:MM`). They all apply the same
-saved offset, including day/year rollover. `conferenceClockEpoch()` returns
-UTC seconds (zero while invalid), `conferenceClockOffsetMinutes()` exposes
-the saved display offset, and `conferenceClockLocalTime()` supplies checked
-calendar fields without parsing display strings. Invalid clocks yield visible
-date/time placeholders.
+Native views receive the shared local-time helpers: `badge_clock::timeText()`
+(`h:mm AM/PM`) and `badge_clock::dateText()` (`YYYY-MM-DD h:mm AM/PM`). Both apply
+the same saved offset, including day/year rollover. For example, Settings can
+show `2026-10-07 1:30 PM`. An invalid date/time remains `Date / time not set`.
+AM/PM text is fixed English, independent of the C library locale.
+
+`badge_clock::epoch()` still returns UTC seconds (zero while invalid), and
+`badge_clock::offset()` exposes the saved display offset. Agenda state and the
+After Dark reveal use those numeric values, without parsing display strings.
+The published agenda's labels also use `h:mm AM/PM`; its start minutes, daily
+boundaries, UTC storage and USB/phone clock contracts are unchanged by display
+formatting.
 
 ## Flash one device
 
@@ -338,6 +344,10 @@ Phone-clock tests cover strict field validation, east/west offset signs, local
 day/year rollover with UTC unchanged, reload, unchanged-offset write avoidance,
 and rejected RTC/system-clock readback or persistence failures. These are host
 simulations; they do not establish real-phone behavior by themselves.
+Native clock tests additionally check 12-hour midnight/noon labels, unpadded
+hours, two-digit minutes, fractional-hour offsets, both offset limits and invalid
+placeholders. Agenda tests verify each displayed 12-hour label matches its
+numeric start minute.
 Run them through `scripts/test.sh`.
 The host tests do not access the board or measure retention, drift, or physical
 power behavior. Record actual device checks separately with the source version.

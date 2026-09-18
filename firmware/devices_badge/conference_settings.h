@@ -25,7 +25,7 @@ inline ConferenceSettingsAction conferenceSettingsHit(int x, int y) {
 // Debouncing uses elapsed monotonic milliseconds, never the adjustable RTC.
 class ConferenceSettings {
  public:
-  static constexpr uint8_t MIN_BRIGHTNESS = 10, MAX_BRIGHTNESS = 100, DEFAULT_BRIGHTNESS = 50;
+  static constexpr uint8_t MIN_BRIGHTNESS = 10, MAX_BRIGHTNESS = 100, DEFAULT_BRIGHTNESS = 60;
   static constexpr uint32_t SAVE_DELAY_MS = 1200;
   uint8_t brightness = DEFAULT_BRIGHTNESS;
   ConferenceOrientationMode orientation = ConferenceOrientationMode::Free;

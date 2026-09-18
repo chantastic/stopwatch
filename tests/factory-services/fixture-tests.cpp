@@ -2,6 +2,7 @@
 #undef fsync
 }
 ProfileSnapshot profile_snapshot(){std::lock_guard<std::mutex> lock(data_mutex);return stored;}
+// NATIVE_RESET_API_HERE
 // NATIVE_INITIALIZER_HERE
 }
 std::vector<uint8_t> bytes(const std::string& p){std::ifstream f(p,std::ios::binary);return {std::istreambuf_iterator<char>(f),{}};}
@@ -63,6 +64,59 @@ void check_prefill(){
  assert(page.find("const nonce='"+badge::session_nonce+"'")!=std::string::npos);
  badge::stored=previous;
 }
+void check_reset(const std::vector<uint8_t>& jpeg){
+ using State=badge::ProfileResetState;
+ auto original=badge::stored;auto originalBytes=bytes(badge::record_path);
+ badge::Profile personal;personal.name="Reset Attendee";personal.company="Reset Company";
+ personal.urls[0]="https://github.com/example";personal.urls[1]="https://x.com/example";personal.urls[2]="https://www.linkedin.com/in/example/";
+ std::string error;assert(badge::save_record(personal,jpeg.data(),jpeg.size(),true,error));
+ const auto saved=badge::profile_snapshot();const auto savedBytes=bytes(badge::record_path);
+ const auto legacyPath=root+"/legacy-profile-sentinel.bin";const std::vector<uint8_t> legacy={0x41,0x55,0x54,0x48};write_bytes(legacyPath,legacy);
+ const auto formatsBefore=format_calls;
+ auto unchanged=[&]{
+  const auto now=badge::profile_snapshot();
+  assert(bytes(badge::record_path)==savedBytes&&now.revision==saved.revision);
+  assert(now.profile.name==personal.name&&now.profile.company==personal.company&&now.avatar==saved.avatar);
+  for(unsigned i=0;i<3;++i)assert(now.profile.urls[i]==personal.urls[i]);
+  assert(bytes(legacyPath)==legacy&&format_calls==formatsBefore);
+ };
+ // Setup and upload staging must be completely gone before queueing a reset.
+ for(bool* busy:{&badge::portal.active,&badge::portal.starting,&badge::requested,&badge::running}){
+  *busy=true;assert(!badge::profile_reset_request(error)&&!error.empty());*busy=false;unchanged();
+ }
+ badge::staged_image={1,2,3};assert(!badge::profile_reset_request(error));badge::staged_image.clear();
+ badge::staged_token="staged";assert(!badge::profile_reset_request(error));badge::staged_token.clear();
+ badge::service_task=nullptr;assert(!badge::profile_reset_request(error));badge::service_task=reinterpret_cast<void*>(1);
+ badge::stored.ready=false;assert(!badge::profile_reset_request(error));badge::stored.ready=true;
+ assert(badge::profile_reset_snapshot().state==State::Idle);unchanged();
+ // Acceptance is not completion, and duplicate requests cannot replace the job.
+ assert(badge::profile_reset_request(error)&&error.empty());assert(badge::profile_reset_snapshot().state==State::Pending);unchanged();
+ assert(!badge::profile_reset_request(error)&&badge::profile_reset_snapshot().state==State::Pending);
+ // Recheck the exclusion at execution as well; failure never retries itself.
+ badge::portal.active=true;badge::process_profile_reset();badge::portal.active=false;
+ assert(badge::profile_reset_snapshot().state==State::Failed&&!badge::profile_reset_snapshot().error.empty());unchanged();
+ badge::process_profile_reset();assert(badge::profile_reset_snapshot().state==State::Failed);unchanged();
+ for(bool* failure:{&rename_failed,&sync_failed}){
+  assert(badge::profile_reset_request(error));*failure=true;badge::process_profile_reset();*failure=false;
+  assert(badge::profile_reset_snapshot().state==State::Failed&&!badge::profile_reset_snapshot().error.empty());unchanged();
+  badge::process_profile_reset();unchanged(); // Explicit retry is required.
+ }
+ const auto normalTemporary=badge::temp_path;badge::temp_path=root+"/missing/record.tmp";
+ assert(badge::profile_reset_request(error));badge::process_profile_reset();badge::temp_path=normalTemporary;
+ assert(badge::profile_reset_snapshot().state==State::Failed);unchanged();
+ assert(badge::profile_reset_request(error));badge::process_profile_reset();
+ assert(badge::profile_reset_snapshot().state==State::Succeeded&&badge::profile_reset_snapshot().error.empty());
+ auto empty=badge::profile_snapshot();assert(empty.ready&&empty.profile.name.empty()&&empty.profile.company.empty()&&!empty.avatar);
+ for(auto& url:empty.profile.urls)assert(url.empty());assert(empty.revision==saved.revision+1);
+ badge::ProfileSnapshot durable;assert(badge::read_record(badge::record_path.c_str(),durable));
+ assert(durable.profile.name.empty()&&durable.profile.company.empty()&&!durable.avatar);
+ for(auto& url:durable.profile.urls)assert(url.empty());
+ const auto emptyBytes=bytes(badge::record_path);badge::process_profile_reset();
+ assert(bytes(badge::record_path)==emptyBytes&&badge::profile_snapshot().revision==empty.revision);
+ assert(bytes(legacyPath)==legacy&&format_calls==formatsBefore);
+ // The fixture restores its own synthetic state for the unrelated mount checks.
+ write_bytes(badge::record_path,originalBytes);badge::stored=original;badge::reset_state={};
+}
 int main(int argc,char**argv){
  assert(argc==2);char tmp[]="/tmp/native-badge-profile-XXXXXX";root=mkdtemp(tmp);badge::record_path=root+"/conference-manual-v1.bin";badge::temp_path=root+"/conference-manual-v1.tmp";
  auto jpeg=bytes(argv[1]);assert(!jpeg.empty());
@@ -85,7 +139,7 @@ int main(int argc,char**argv){
  next.company.clear();assert(badge::save_record(next,nullptr,0,false,error));assert(badge::u16(bytes(badge::record_path).data()+8)==1);
  {ConferenceProfileStore loaded;assert(loaded.begin());assert(loaded.profile().name==next.name.c_str());assert(!loaded.avatarPixels());}
  std::string name,url;assert(badge::name_valid("  Jos\xc3\xa9  ",name)&&name=="Jos\xc3\xa9");assert(!badge::name_valid("line\nbreak",name));assert(!badge::name_valid(std::string("a\0b",3),name));assert(badge::social_url(1,"https://twitter.com/example_1/",url)&&url=="https://x.com/example_1");assert(!badge::social_url(0,"https://github.com.evil/account",url));
- check_metadata();check_form();check_prefill();
+ check_metadata();check_form();check_prefill();check_reset(jpeg);
  assert(badge::profile_initialize_for_conference()&&format_calls==0);
  badge::stored.ready=false;badge::portal.active=true;assert(!badge::profile_initialize_for_conference()&&format_calls==0);badge::portal.active=false;
  for(size_t i=0;i<partitions.size();++i){partitions[i].address++;assert(!badge::profile_initialize_for_conference()&&format_calls==0);partitions[i].address--;}
@@ -93,5 +147,5 @@ int main(int argc,char**argv){
  native_mountable=true;assert(badge::profile_initialize_for_conference()&&format_calls==0&&badge::stored.profile.name==next.name);
  badge::stored.ready=false;native_mountable=false;native_mounted=false;assert(badge::profile_initialize_for_conference()&&format_calls==1&&badge::stored.profile.name.empty());
  assert(badge::profile_initialize_for_conference()&&format_calls==1);
- std::filesystem::remove_all(root);puts("Native services: legacy/v2 fields+avatar compatibility, company bounds/schema/prefill, corruption, atomic failures, image removal and initialization guards passed");
+ std::filesystem::remove_all(root);puts("Native services: legacy/v2 fields+avatar compatibility, company bounds/schema/prefill, corruption, atomic failures, image removal, queued profile reset and initialization guards passed");
 }

@@ -107,7 +107,7 @@ TouchSample touchSample;
 Buttons buttonState;
 Acceleration accel;
 Battery batteryState;
-uint8_t rotationValue = 0, brightnessValue = 50;
+uint8_t rotationValue = 0, brightnessValue = 60;
 uint32_t lastTouchPoll = 0, lastImuPoll = 0, lastBatteryPoll = 0;
 bool sampledTouchOnce = false, sampledImuOnce = false, sampledBatteryOnce = false;
 bool injectedActive = false, injectedReleasePending = false;

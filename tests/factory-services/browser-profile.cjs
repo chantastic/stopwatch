@@ -10,7 +10,7 @@ function element(id){
 }
 const requests=[];
 let saveOk=true;
-const context=vm.createContext({Date,Math,Error,Intl,
+const context=vm.createContext({Date,Math,Error,Intl,setTimeout,clearTimeout,AbortController,
   document:{getElementById:element},
   fetch:async(path,options)=>{
     requests.push({path,...options,parsed:JSON.parse(options.body)});

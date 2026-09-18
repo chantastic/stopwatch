@@ -36,7 +36,7 @@ void Chrome::update() {
     const bool profile_filled = context_.page == 3 &&
         (!model.name.empty() || !model.company.empty() || model.avatar ||
          std::any_of(model.socials.begin(), model.socials.end(), [](const auto& url) { return !url.empty(); }));
-    set_hidden(root_, context_.setup || context_.touch_test || profile_filled);
+    set_hidden(root_, context_.setup || context_.touch_test || context_.reset || profile_filled);
     set_hidden(brand_, context_.page == 0);
     set_text(footer_, context_.page == 5 && model.settings_pending ? "Saving settings..." : "");
     const int count = visible_page_count(model);

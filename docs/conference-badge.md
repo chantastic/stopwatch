@@ -24,9 +24,9 @@ The primary pages wrap in this order, with After Dark hidden until unlocked:
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
    GitHub, X/Twitter and LinkedIn, including empty slots.
-5. **Make it yours**: real QR to `https://drop.workos.cloud/stopwatch`.
+5. **Hack this device. / Learn how**: real QR to `https://drop.workos.cloud/stopwatch`.
 6. **Settings**: battery percentage, brightness, local date/time, phone setup,
-   touch test, and orientation. All controls fit on one page; no settings
+   touch test, reset badge, and orientation. All controls fit on one page; no settings
    scrolling is needed.
 
 The factory 468×466 framebuffer uses the supplied pixel chevrons and small init()
@@ -93,12 +93,40 @@ NVS and the UI model. Views never read the clock or storage directly.
 ## Settings and current schedule item
 
 Brightness applies immediately in ten-percentage-point steps, bounded to 10–100%
-with a 50% default. The minimum maps to a nonzero display level. Brightness and
+with a 60% default. Existing saved brightness remains valid. The minimum maps to a nonzero display level. Brightness and
 orientation share one versioned NVS value in `conference_ui`; writes coalesce
 after 1.2 seconds without another change. Settings says `Saving settings...` below the battery
 while pending, and a failed write stays pending with a five-second retry.
 The existing selected-network preference remains separate. Changes made just
 before power loss may not have reached the delayed save yet.
+
+All displayed clock times use `h:mm AM/PM`, including midnight (`12:00 AM`) and
+noon (`12:00 PM`). Settings displays `YYYY-MM-DD | h:mm AM/PM`; its date and
+agenda calculations still use the same local offset from UTC.
+
+### Reset badge
+
+The Settings reset row opens an explanation and **Reset badge / Cancel** buttons.
+Only a fresh completed confirmation tap queues the reset; drags, holds, opening
+the screen or pressing a pusher cannot confirm it. Either pusher cancels before
+confirmation. While the worker is running, navigation and duplicate requests are
+blocked; the reset view holds the current orientation.
+
+The existing service worker atomically saves an empty manual profile, clearing
+name, company, photo and social URLs. Main then writes default conference settings:
+60% brightness, Free orientation, first network and no saved agenda bookmarks.
+The clock, permanent After Dark unlock, legacy records and partition map remain.
+This is a logical badge reset, not a secure erase or factory firmware restoration.
+
+A failed profile write preserves the previous record and requires an explicit
+Retry. NVS preference keys are separate writes: if a later setting write fails,
+the already-cleared profile and any partial preference changes remain. The screen
+reports that partial result and offers Retry to finish; it does not report success.
+After success, Done returns to the empty badge. No reset occurs during startup,
+ordinary flashing or opening/cancelling the confirmation.
+
+The [meeting follow-up verification](meeting-followup-verification-2026-09-17.md)
+records reset/clock/photo tests and the preserved-data device check.
 
 Orientation has exactly three choices: **Free** resumes calibrated automatic
 rotation in all four directions; **Default** fixes the stock rotation 0;
@@ -207,8 +235,15 @@ bytes without controls. A blank company remains blank on a configured face.
 GitHub, X/Twitter and LinkedIn personal profile handles/HTTPS URLs are accepted;
 unrelated hosts, extra paths, control characters, and excessive input are rejected.
 
-Choose a JPEG, PNG, or WebP photo in the browser. Browser JavaScript converts it
-locally to JPEG at most 512×512 and 128 KiB. The device independently checks the
+Choose a locally available photo in the browser: JPEG, PNG, WebP, or HEIC/HEIF
+when that browser supports it. The portal prepares and shows a square preview
+before Save. Browser JavaScript converts it locally to JPEG at most 512×512 and
+128 KiB. Decode, encoding and network waits have bounded error paths; failed
+preparation blocks Save until a new photo is chosen or the change is cancelled.
+If the captive Wi-Fi sign-in window cannot open photos, stay on the badge Wi-Fi
+and open `http://192.168.4.1` in Safari or Chrome. Cloud-only photos need a local
+copy because the badge hotspot supplies no internet connection.
+The device independently checks the
 JPEG size/dimensions, decodes in PSRAM, and stores a 160×160 center crop. Keep,
 replace, and remove are explicit choices. An image upload is only staged until
 Save badge commits all fields and the image together.

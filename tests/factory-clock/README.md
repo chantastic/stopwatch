@@ -8,7 +8,9 @@ phone-response field builder. Host adapters replace RTC, system-clock, NVS, and
 cJSON output calls. All RTC/NVS/system-clock access asserts main-thread ownership;
 phone calls run on a separate worker and reach hardware only through `poll()`.
 
-Checks cover retained startup time, timezone/day rollover, epoch/offset bounds,
+Checks cover retained startup time, 12-hour display (midnight/noon, unpadded
+hours, invalid placeholders), timezone/day/year rollover with UTC unchanged,
+fractional-hour offsets, epoch/offset bounds,
 unchanged-offset write avoidance, request exclusion, actual readback fields
 (including `rtc_epoch`), and RTC-write, final-readback, NVS, and system-clock
 failures. The response test uses a readback one second after the request to catch

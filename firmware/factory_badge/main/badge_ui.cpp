@@ -38,7 +38,7 @@ public:
         lv_obj_add_event_cb(frame_->get(), cancel_gesture, LV_EVENT_PRESSED, nullptr);
         lv_obj_add_event_cb(frame_->get(), cancel_gesture, LV_EVENT_PRESS_LOST, nullptr);
         lv_obj_add_event_cb(frame_->get(), [](lv_event_t*) {
-            if (context.setup || context.touch_test) return;
+            if (context.setup || context.touch_test || context.reset) return;
             auto* input = lv_indev_active();
             if (!input) return;
             auto direction = lv_indev_get_gesture_dir(input);
@@ -48,7 +48,7 @@ public:
         lv_obj_add_event_cb(frame_->get(), [](lv_event_t*) {
             const int delta = pending_gesture;
             pending_gesture = 0;
-            if (delta && !context.setup && !context.touch_test) ui_page(delta);
+            if (delta && !context.setup && !context.touch_test && !context.reset) ui_page(delta);
         }, LV_EVENT_RELEASED, nullptr);
         page_host_ = ui::container(frame_->get(), 0, 0, ui::Width, ui::Height);
         chrome_ = std::make_unique<ui::Chrome>(context, lv_display_get_layer_top(display));
@@ -73,6 +73,7 @@ public:
             page_.reset();
             if (context.setup) page_ = ui::make_setup(context, page_host_);
             else if (context.touch_test) page_ = ui::make_touch_test(context, page_host_);
+            else if (context.reset) page_ = ui::make_reset(context, page_host_);
             else {
                 using Factory = std::unique_ptr<ui::PageView>(*)(ui::Context&, lv_obj_t*);
                 static constexpr Factory factories[] = {
@@ -108,7 +109,7 @@ void ui_init(lv_display_t* target, UiCallbacks callbacks) {
 }
 void ui_update(const UiModel& model) {
     context.model = model;
-    if (!context.setup && !context.touch_test && !ui::page_visible(context.page, model)) {
+    if (!context.setup && !context.touch_test && !context.reset && !ui::page_visible(context.page, model)) {
         context.page = 3;
         context.rebuild = true;
     }
@@ -119,7 +120,7 @@ void ui_tick(uint32_t now_ms) {
 }
 void ui_rotation_changed() { if (app) app->reflow(); }
 void ui_page(int delta) {
-    if (context.setup || context.touch_test || delta == 0) return;
+    if (context.setup || context.touch_test || context.reset || delta == 0) return;
     // IDs stay stable for setup returns and diagnostics. Only traversal skips
     // the invitation until the controller reveals it.
     const int steps = delta % ui::visible_page_count(context.model);
@@ -133,12 +134,13 @@ void ui_page(int delta) {
     pending_gesture = 0;
 }
 void ui_open_after_dark() {
-    if (!context.model.after_dark_unlocked || context.setup || context.touch_test) return;
+    if (!context.model.after_dark_unlocked || context.setup || context.touch_test || context.reset) return;
     context.page = ui::AfterDarkPage;
     context.rebuild = true;
     pending_gesture = 0;
 }
 void ui_button(bool both, int delta) {
+    if (context.reset) { ui_close_reset(); return; }
     if (context.touch_test) { ui_close_touch_test(); return; }
     if (context.setup) {
         if (context.callbacks.close_setup) context.callbacks.close_setup();
@@ -148,6 +150,7 @@ void ui_button(bool both, int delta) {
     else ui_page(delta);
 }
 void ui_show_setup(const std::string& ssid, const std::string& password, const std::string& ip, const std::string& status) {
+    if (context.reset) return;
     if (!context.setup) {
         pending_gesture = 0;
         context.setup_origin = context.page;
@@ -170,7 +173,7 @@ void ui_close_setup(bool saved) {
     context.rebuild = true;
 }
 void ui_show_touch_test() {
-    if (context.setup) return;
+    if (context.setup || context.reset) return;
     context.page = 5;
     pending_gesture = 0;
     context.touch_test = true;
@@ -185,6 +188,23 @@ void ui_close_touch_test() {
     context.page = 5;
     context.rebuild = true;
 }
+void ui_show_reset() {
+    if (context.setup || context.touch_test || context.reset) return;
+    context.page = 5;
+    pending_gesture = 0;
+    context.reset = true;
+    context.reset_confirmed = false;
+    context.rebuild = true;
+}
+void ui_close_reset() {
+    if (!context.reset || (context.reset_confirmed && context.model.reset_state == ResetState::Working)) return;
+    context.reset = false;
+    context.page = context.reset_confirmed && context.model.reset_state == ResetState::Complete ? 3 : 5;
+    context.reset_confirmed = false;
+    pending_gesture = 0;
+    context.rebuild = true;
+}
+bool ui_reset_active() { return context.reset; }
 void ui_touch_sample(int raw_x, int raw_y, int x, int y, bool pressed, uint8_t rotation, bool sensor) {
     if (!context.touch_test) return;
     // Sensor coordinates are supplied by the native LVGL input path. No UI

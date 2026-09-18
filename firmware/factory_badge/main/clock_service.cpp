@@ -7,6 +7,8 @@
 #include <memory>
 #include <mutex>
 #include <cstring>
+#include <cstdio>
+#include <ctime>
 
 namespace badge_clock {
 namespace {
@@ -30,12 +32,18 @@ bool systemSet(int64_t value) {
     tv.tv_sec = static_cast<time_t>(value);
     return settimeofday(&tv, nullptr) == 0;
 }
-std::string format(const char* pattern, const char* empty) {
-    if (!valid()) return empty;
-    time_t local = static_cast<time_t>(epoch() + int64_t(utcOffset) * 60);
-    tm fields = {};
-    char text[40] = {};
-    if (!gmtime_r(&local, &fields) || !strftime(text, sizeof(text), pattern, &fields)) return empty;
+bool localFields(tm& fields) {
+    const auto utc = epoch();
+    if (!utc) return false;
+    const time_t local = static_cast<time_t>(utc + int64_t(utcOffset) * 60);
+    return gmtime_r(&local, &fields) != nullptr;
+}
+std::string formatTime(const tm& fields) {
+    char text[12] = {};
+    // Avoid locale-dependent AM/PM names and nonportable strftime padding flags.
+    const int hour = fields.tm_hour % 12;
+    snprintf(text, sizeof(text), "%d:%02d %s", hour ? hour : 12,
+             fields.tm_min, fields.tm_hour < 12 ? "AM" : "PM");
     return text;
 }
 }
@@ -54,8 +62,17 @@ bool valid() { return ready && epochValid(int64_t(time(nullptr))); }
 int64_t epoch() { return valid() ? int64_t(time(nullptr)) : 0; }
 int offset() { return utcOffset; }
 const char* source() { return adoptedSource; }
-std::string timeText() { return format("%H:%M", "--:--"); }
-std::string dateText() { return format("%Y-%m-%d %H:%M", "Date / time not set"); }
+std::string timeText() {
+    tm fields = {};
+    return localFields(fields) ? formatTime(fields) : "--:--";
+}
+std::string dateText() {
+    tm fields = {};
+    char date[16] = {};
+    if (!localFields(fields) || !strftime(date, sizeof(date), "%Y-%m-%d", &fields))
+        return "Date / time not set";
+    return std::string(date) + " " + formatTime(fields);
+}
 bool validNonce(const char* value) {
     if (!value) return false;
     size_t size = strlen(value);

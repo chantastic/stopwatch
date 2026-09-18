@@ -1,6 +1,7 @@
 #include "../firmware/factory_badge/main/schedule.h"
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <limits>
 
 int main() {
@@ -12,6 +13,18 @@ int main() {
     assert(state(Items.size(), 600) == State::Unknown);
     for (size_t i = 0; i < Items.size(); ++i) {
         assert(Items[i].minute == starts[i]);
+        // The public 12-hour label must describe the same start as the daily
+        // scheduling value, with a two-digit minute and no leading hour zero.
+        int hour = 0, minute = 0, consumed = 0;
+        char meridiem[3] = {};
+        assert(std::sscanf(Items[i].time, "%d:%d %2s%n", &hour, &minute, meridiem, &consumed) == 3);
+        assert(hour >= 1 && hour <= 12 && minute >= 0 && minute < 60);
+        assert(std::strcmp(meridiem, "AM") == 0 || std::strcmp(meridiem, "PM") == 0);
+        assert(Items[i].time[0] != '0' && Items[i].time[consumed] == '\0');
+        const char* colon = std::strchr(Items[i].time, ':');
+        assert(colon && colon[1] >= '0' && colon[1] <= '9' &&
+               colon[2] >= '0' && colon[2] <= '9' && colon[3] == ' ');
+        assert((hour % 12 + (meridiem[0] == 'P' ? 12 : 0)) * 60 + minute == starts[i]);
         assert(current(starts[i]) == int(i));
         assert(current(endMinute(i) - 1) == int(i));
         assert(state(i, -1) == State::Unknown);
@@ -50,5 +63,5 @@ int main() {
     assert(localMinute(midnight, -841, true) == -1);
     const auto large = localMinute(std::numeric_limits<int64_t>::max(), 840, true);
     assert(large >= 0 && large < 1440);
-    std::puts("Daily agenda: published starts, exact transitions, passed/upcoming states, midnight reset, date repetition, local offsets and invalid clocks passed");
+    std::puts("Daily agenda: 12-hour labels, published starts, exact transitions, passed/upcoming states, midnight reset, date repetition, local offsets and invalid clocks passed");
 }

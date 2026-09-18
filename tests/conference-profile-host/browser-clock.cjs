@@ -12,7 +12,7 @@ const requests=[];
 let offsetWest=420,zone='America/Los_Angeles',replyOk=true,replyValid=true;
 let epochMillis=1789651234567;
 class BrowserDate extends Date{constructor(){super(epochMillis);}getTimezoneOffset(){return offsetWest;}}
-const environment={Date:BrowserDate,Math,Error,console,
+const environment={Date:BrowserDate,Math,Error,console,setTimeout,clearTimeout,AbortController,
   Intl:{DateTimeFormat:()=>({resolvedOptions:()=>({timeZone:zone})})},
   document:{getElementById:element},
   fetch:async(path,options)=>{requests.push({path,...options,parsed:JSON.parse(options.body)});return {ok:replyOk,json:async()=>({ok:replyValid,valid:replyValid,message:replyOk?'Clock synchronized.':'Clock hardware unavailable.'})};}

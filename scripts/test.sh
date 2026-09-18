@@ -49,6 +49,7 @@ python3 "$REPO_ROOT/tests/test_verify_factory.py"
 # against real LVGL or bounded host hardware/filesystem adapters.
 bash "$REPO_ROOT/tests/factory-board/run.sh"
 python3 "$REPO_ROOT/tests/factory-services/run.py"
+python3 "$REPO_ROOT/tests/factory-reset/run.py"
 python3 "$REPO_ROOT/tests/factory-clock/run.py"
 bash "$REPO_ROOT/tests/factory-ui/run.sh"
 

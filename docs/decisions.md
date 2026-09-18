@@ -13,6 +13,13 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 meeting follow-up: label the customization page **Hack this device.**
+  with **Learn how**, default brightness to 60%, and display clocks in 12-hour
+  AM/PM format. Add a deliberately confirmed badge reset that clears manual
+  attendee data/bookmarks and restores UI defaults while preserving clock and
+  After Dark unlock. Prepare and preview photos locally before portal Save, with
+  bounded failures and a normal-browser fallback for captive sign-in windows.
+
 - September 17 design update: implement the supplied init() conference screens
   on the existing LVGL/Smooth/Mooncake stack. Use the isolated brand marks exactly,
   and the supplied 10-second motion clip behind the intro logo. Add optional

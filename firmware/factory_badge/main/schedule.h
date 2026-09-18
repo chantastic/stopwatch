@@ -10,7 +10,7 @@
 namespace badge_schedule {
 struct Item {
     int minute;
-    const char* time;
+    const char* time; // Displayed h:mm AM/PM; minute remains the scheduling value.
     const char* title;
     const char* detail;
 };

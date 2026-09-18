@@ -15,7 +15,7 @@ inline bool page_visible(int page, const UiModel& model) {
 inline int visible_page_count(const UiModel& model) {
     return model.after_dark_unlocked ? PageCount : PageCount - 1;
 }
-inline constexpr const char* PageNames[] = {"init()", "Schedule", "After Dark", "Badge", "Hack your Badge", "Settings"};
+inline constexpr const char* PageNames[] = {"init()", "Schedule", "After Dark", "Badge", "Hack this device", "Settings"};
 inline constexpr const char* NetworkNames[] = {"GitHub", "X / Twitter", "LinkedIn"};
 inline constexpr const char* HackUrl = "https://drop.workos.cloud/stopwatch";
 
@@ -26,6 +26,8 @@ struct Context {
     int setup_origin = 0;
     bool setup = false;
     bool touch_test = false;
+    bool reset = false;
+    bool reset_confirmed = false;
     bool rebuild = false;
     uint8_t rotation = 2;
     UiTouchSample touch;
@@ -52,5 +54,6 @@ std::unique_ptr<PageView> make_hack(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_settings(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_setup(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_touch_test(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_reset(Context&, lv_obj_t*);
 
 } // namespace badge::ui

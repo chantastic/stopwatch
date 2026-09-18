@@ -17,6 +17,13 @@ the temporary local phone portal is AP-only and does not require a cloud login.
 Source branding and the embedded background clip are static conference artwork,
 not attendee data. Normal operation keeps Wi-Fi and Bluetooth off.
 
+Photo selection and its preview are processed in the local browser; the image
+is sent to the badge only on Save. Settings → Reset badge explicitly confirms
+replacement of the current manual profile with an empty record and restores
+conference UI defaults/bookmarks. It retains the clock, permanent event unlock
+and historical connected records. This is logical removal, not a secure flash
+erase. Ordinary updates and cancellation of reset preserve the profile.
+
 Profile fields/photos, setup credentials and framebuffer captures remain private.
 The diagnostic status reports company presence and bookmark bits, not company
 text. The stock verifier refuses to capture any personalized profile, including

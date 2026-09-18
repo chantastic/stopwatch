@@ -34,6 +34,7 @@ int response(int64_t requested_epoch, int requested_offset, const PhoneResult& r
 }
 
 int main() {
+    assert(badge_clock::timeText() == "--:--" && badge_clock::dateText() == "Date / time not set");
     badge_clock::init();
     assert(badge_clock::valid() && std::string(badge_clock::source()) == "rtc");
     std::string error;
@@ -42,8 +43,33 @@ int main() {
     assert(!badge_clock::set(1789670460, 841, "computer", error) && error == "invalid_value");
     assert(!badge_clock::set(badge_clock::MaxEpoch, 0, "computer", error));
     assert(badge_clock::set(badge_clock::MinEpoch, -420, "computer", error));
-    assert(badge_clock::dateText() == "2023-12-31 17:00");
+    assert(badge_clock::timeText() == "5:00 PM" && badge_clock::dateText() == "2023-12-31 5:00 PM");
     assert(badge_clock::validNonce("0123456789abcdef") && !badge_clock::validNonce("invalid"));
+
+    // Display formatting uses the saved offset while RTC/system values stay UTC.
+    struct DisplayCase { int64_t seconds; int offset; const char* time; const char* date; };
+    constexpr DisplayCase displays[] = {
+        {0, 0, "12:00 AM", "2024-01-01 12:00 AM"},
+        {5 * 60, 0, "12:05 AM", "2024-01-01 12:05 AM"},
+        {9 * 3600 + 10 * 60, 0, "9:10 AM", "2024-01-01 9:10 AM"},
+        {11 * 3600 + 59 * 60, 0, "11:59 AM", "2024-01-01 11:59 AM"},
+        {12 * 3600, 0, "12:00 PM", "2024-01-01 12:00 PM"},
+        {12 * 3600 + 5 * 60, 0, "12:05 PM", "2024-01-01 12:05 PM"},
+        {23 * 3600 + 59 * 60, 0, "11:59 PM", "2024-01-01 11:59 PM"},
+        {0, -420, "5:00 PM", "2023-12-31 5:00 PM"},
+        {23 * 3600 + 45 * 60, 60, "12:45 AM", "2024-01-02 12:45 AM"},
+        {0, 345, "5:45 AM", "2024-01-01 5:45 AM"},
+        {366LL * 86400 - 30 * 60, 60, "12:30 AM", "2025-01-01 12:30 AM"},
+        {0, -840, "10:00 AM", "2023-12-31 10:00 AM"},
+        {12 * 3600, 840, "2:00 AM", "2024-01-02 2:00 AM"},
+    };
+    for (const auto& display : displays) {
+        const int64_t utc = badge_clock::MinEpoch + display.seconds;
+        assert(badge_clock::set(utc, display.offset, "computer", error));
+        assert(badge_clock::timeText() == display.time && badge_clock::dateText() == display.date);
+        assert(badge_clock::epoch() == utc && wall == utc && rtc == utc);
+        assert(badge_clock::offset() == display.offset);
+    }
 
     // Actual readback advances one second: the response must not echo input.
     write_adjustment = 1;
@@ -73,6 +99,7 @@ int main() {
     auto failed = phone(1789670900, 0);
     assert(!failed.ok && !failed.snapshot.valid && failed.error == "clock_verify_failed");
     assert(failed.snapshot.rtc_epoch == 0 && failed.snapshot.source == "unset" && !badge_clock::valid());
+    assert(badge_clock::timeText() == "--:--" && badge_clock::dateText() == "Date / time not set");
     response(1789670900, 0, failed);
     assert(response_status == 400 && !std::get<bool>(serialized.fields.at("ok")) && !std::get<bool>(serialized.fields.at("valid")));
     assert(std::get<double>(serialized.fields.at("rtc_epoch")) == 0);
@@ -94,5 +121,5 @@ int main() {
     system_ok = true;
     auto recovered = phone(1789671400, -840);
     assert(recovered.ok && recovered.snapshot.valid && recovered.snapshot.offset_minutes == -840);
-    puts("Native clock: RTC retention, UTC bounds/rollover, offset persistence, worker queue/busy, verified response fields and injected readback failures passed");
+    puts("Native clock: 12-hour display, midnight/noon/offset rollover, RTC retention, UTC bounds, offset persistence, worker queue/busy, verified response fields and injected readback failures passed");
 }

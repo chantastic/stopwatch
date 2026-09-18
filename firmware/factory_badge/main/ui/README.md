@@ -13,10 +13,13 @@ hardware, rotate touch coordinates, access storage, or start network workers.
   press, including a drag that leaves and re-enters a button. LVGL owns widget
   hit testing and scroll recognition.
 - `chrome.*`: supplied small wordmark, left/right controls and square page indicators on the LVGL top layer.
-  Chrome is hidden during setup, Touch test and a configured profile face.
+  Chrome is hidden during setup, Touch test, reset and a configured profile face.
 - `page_*.cpp`: the six page implementations. Edit a page here without changing
   input drivers or services. Schedule and social cards use native scroll views.
-- `modal_*.cpp`: setup credentials and diagnostic touch targets.
+- `modal_*.cpp`: setup credentials, diagnostic touch targets and confirmed reset.
+  Reset uses a fresh release tap, blocks navigation while working, and displays
+  profile failures separately from partial preference failures. Main and the
+  existing service worker own all persistence.
 - `design_assets.*`, `assets/`: original supplied brand alpha masks, without resampling.
 - `font_*.c`, `fonts/`: licensed native LVGL typography and pinned regeneration.
 - `intro_loop.*`: supplied motion clip converted for LVGL’s GIF widget, scoped to init().

@@ -16,6 +16,11 @@ struct ProfileSnapshot {
   bool ready = false;
   std::string error;
 };
+enum class ProfileResetState : uint8_t { Idle, Pending, Running, Succeeded, Failed };
+struct ProfileResetSnapshot {
+  ProfileResetState state = ProfileResetState::Idle;
+  std::string error;
+};
 enum class PortalOutcome : uint8_t { None, Saved, Cancelled, TimedOut, Error };
 struct PortalSnapshot {
   bool active = false, starting = false;
@@ -33,6 +38,13 @@ bool portal_start(const char* test_password = nullptr);
 void portal_stop();
 void portal_tick(); // Compatibility hook; lifecycle is owned by a service task.
 PortalSnapshot portal_snapshot();
+// Explicitly confirmed reset only. A successful request queues one atomic
+// empty-profile write on the existing worker; it does not mean the write passed.
+// Inspect the terminal snapshot before resetting main-owned preferences. A failed
+// write retains the previous profile and requires another explicit request.
+// Setup must be fully stopped; clock, NVS and legacy records are untouched.
+bool profile_reset_request(std::string& error);
+ProfileResetSnapshot profile_reset_snapshot();
 bool profile_clear(); // Explicit diagnostic only; never called by normal startup.
 // Destructive batch opt-in only: caller must validate the exact confirmation
 // token and fresh nonce. Preserves mounted stores; never invoked implicitly.

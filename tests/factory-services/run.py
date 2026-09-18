@@ -17,7 +17,9 @@ production += source[source.index("std::string escape("):source.index("const cha
 production += source[source.index("bool json_fields("):source.index("void finish_session(")]
 prefix = (HERE / "fixture-prefix.cpp").read_text().replace("@@ROOT@@", str(ROOT))
 initialize = source[source.index("bool profile_initialize_for_conference()"):source.rindex("} // namespace badge")]
+reset_api = source[source.index("bool profile_reset_request("):source.index("bool services_init(")]
 tests = (HERE / "fixture-tests.cpp").read_text().replace("// NATIVE_INITIALIZER_HERE", initialize)
+tests = tests.replace("// NATIVE_RESET_API_HERE", reset_api)
 fixture = prefix + production + tests
 (OUT / "compat.cpp").write_text(fixture)
 (OUT / "synthetic.ppm").write_bytes(b"P6\n16 16\n255\n" + bytes([255, 20, 0]) * 256)
@@ -40,3 +42,4 @@ assert script, "Native portal asset must contain its local browser script"
 run("node", "--check", OUT / "portal.js")
 run("node", ROOT / "tests/conference-profile-host/browser-clock.cjs", OUT / "portal.js")
 run("node", HERE / "browser-profile.cjs", OUT / "portal.js")
+run("node", HERE / "browser-photo.cjs", OUT / "portal.js")

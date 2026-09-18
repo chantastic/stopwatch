@@ -37,6 +37,7 @@ struct TrackedSocket { int fd = -1; int64_t opened_at = 0; };
 TrackedSocket tracked_sockets[3];
 ProfileSnapshot stored;
 PortalSnapshot portal;
+ProfileResetSnapshot reset_state; // Protected by portal_mutex with AP lifecycle.
 PhoneClockSync sync_clock;
 std::atomic<bool> requested{false}, running{false};
 TaskHandle_t service_task = nullptr;
@@ -196,6 +197,44 @@ bool save_record(const Profile& profile, const uint8_t* jpeg, size_t jpeg_size, 
   next.revision = previous.revision + 1;
   { std::lock_guard<std::mutex> lock(data_mutex); stored = std::move(next); }
   return true;
+}
+bool reset_pending() {
+  return reset_state.state == ProfileResetState::Pending || reset_state.state == ProfileResetState::Running;
+}
+bool reset_setup_busy() {
+  // Call only under portal_mutex. Short-circuit before inspecting staging while
+  // HTTP may own it. An inactive portal has joined HTTP and cleared staging.
+  return portal.active || portal.starting || requested || running ||
+         !staged_image.empty() || !staged_token.empty();
+}
+bool queue_profile_reset(std::string& error) {
+  std::lock_guard<std::mutex> lock(portal_mutex);
+  error.clear();
+  if (reset_pending()) { error = "Reset already in progress"; return false; }
+  if (reset_setup_busy()) { error = "Close phone setup before resetting the badge"; return false; }
+  if (!service_task) { error = "Reset service unavailable; restart and try again"; return false; }
+  if (!profile_snapshot().ready) { error = "Storage unavailable; saved badge was not changed"; return false; }
+  reset_state = {ProfileResetState::Pending, {}};
+  return true;
+}
+void process_profile_reset() {
+  {
+    std::lock_guard<std::mutex> lock(portal_mutex);
+    if (reset_state.state != ProfileResetState::Pending) return;
+    if (reset_setup_busy()) {
+      reset_state = {ProfileResetState::Failed, "Phone setup is busy; saved badge was not changed"};
+      return;
+    }
+    reset_state.state = ProfileResetState::Running;
+  }
+  // This runs on the service worker. The existing verified temp-file/rename
+  // transaction changes only the current manual record and its in-memory model.
+  // No NVS erase, filesystem format, clock write or legacy-file removal occurs.
+  std::string error;
+  const bool saved = save_record({}, nullptr, 0, true, error);
+  std::lock_guard<std::mutex> lock(portal_mutex);
+  reset_state.state = saved ? ProfileResetState::Succeeded : ProfileResetState::Failed;
+  reset_state.error = saved ? "" : error.empty() ? "Reset failed; previous badge kept" : error;
 }
 std::string random_hex(unsigned bytes) {
   uint8_t random[16]; esp_fill_random(random, sizeof(random)); char text[33] = {};
@@ -407,6 +446,7 @@ void dns_tick() {
 }
 void service_loop(void*) {
   for (;;) {
+    process_profile_reset();
     if (requested && !running) {
       bool ok = start_network();
       if (!ok) { requested = false; stop_network(); }
@@ -440,6 +480,8 @@ void service_loop(void*) {
 
 ProfileSnapshot profile_snapshot() { std::lock_guard<std::mutex> lock(data_mutex); return stored; }
 PortalSnapshot portal_snapshot() { std::lock_guard<std::mutex> lock(portal_mutex); return portal; }
+bool profile_reset_request(std::string& error) { return queue_profile_reset(error); }
+ProfileResetSnapshot profile_reset_snapshot() { std::lock_guard<std::mutex> lock(portal_mutex); return reset_state; }
 bool services_init(PhoneClockSync clock_sync) {
   sync_clock = std::move(clock_sync);
   const esp_partition_t* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "ffat");
@@ -465,6 +507,7 @@ bool services_init(PhoneClockSync clock_sync) {
 }
 bool portal_start(const char* test_password) {
   std::lock_guard<std::mutex> lock(portal_mutex);
+  if (reset_pending()) return false;
   if (portal.active || portal.starting || running) return true;
   portal = {}; auto current = profile_snapshot();
   if (!current.ready || !service_task) { portal.error = current.error.empty() ? "Setup is unavailable" : current.error; portal.outcome = PortalOutcome::Error; return false; }
@@ -478,10 +521,16 @@ bool portal_start(const char* test_password) {
 }
 void portal_stop() { requested = false; }
 void portal_tick() {}
-bool profile_clear() { std::string error; return save_record({}, nullptr, 0, true, error); }
+bool profile_clear() {
+  // Keep the retained explicit USB diagnostic excluded from setup/reset work.
+  std::lock_guard<std::mutex> lock(portal_mutex);
+  if (reset_pending() || reset_setup_busy()) return false;
+  std::string error; return save_record({}, nullptr, 0, true, error);
+}
 bool profile_initialize_for_conference() {
   // Keep setup/start and profile writes excluded throughout explicit formatting.
   std::scoped_lock locks(portal_mutex, write_mutex);
+  if (reset_pending()) return false;
   if (profile_snapshot().ready) return true;
   if (portal.active || portal.starting || requested || running) return false;
   struct Expected { const char* label; uint8_t type, subtype; uint32_t address, size; };
