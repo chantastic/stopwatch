@@ -13,8 +13,11 @@ supplied-brand chrome and square page indicators after partial redraws; no redra
 static pages; release-only buttons; drag-out-and-back, within-button drag and
 long-hold cancellation for ordinary buttons (the code surface accepts holds);
 real agenda text and wrapped titles/details; current/past/upcoming
-styles, release-only bookmark toggles, invalid time, daily reset, entry focus and preserved schedule scroll; native
-schedule/social scrolling; dynamic profile and
+styles, release-only bookmark toggles, invalid time, daily reset and preserved schedule scroll;
+agenda entry and native swipe snapping center each row between the arrows within one pixel,
+including the first/last rows and entries without a current session or valid clock;
+settled agenda frames match a full redraw byte-for-byte after entry and endpoint swipes;
+native schedule/social scrolling; dynamic profile and
 avatar/company updates, social-only profiles and configured faces without chrome; QR expansion; setup return paths; and Touch test lifecycle.
 They do not validate the physical sensor, display transport, or orientation HAL.
 The touch-code view uses the production `MorseUnlock` timings: dots 50–349 ms,

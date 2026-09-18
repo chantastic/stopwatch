@@ -70,6 +70,19 @@ void assert_idle() {
     spin(30);
     assert(flush_count == before); // Static pages do no periodic redraws.
 }
+void assert_complete_schedule_frame(lv_display_t* display) {
+    assert_chrome();
+    assert(lit_pixels(175, 52, 293, 80) > 100); // Schedule heading survives scrolling.
+    assert(lit_pixels(160, 392, 308, 412) > 30); // Swipe instruction survives scrolling.
+    // A settled partial render must match a full invalidation byte-for-byte:
+    // missing chrome or a clipped/stale section of a card cannot pass through
+    // geometry-only assertions or be hidden by our review-image conversion.
+    const auto partial_frame = pixels;
+    lv_obj_invalidate(lv_display_get_screen_active(display));
+    lv_obj_invalidate(lv_display_get_layer_top(display));
+    spin();
+    assert(pixels == partial_frame);
+}
 void snapshot(const std::string& name) {
     spin();
     if (output_directory.empty()) return;
@@ -104,6 +117,29 @@ void assert_inside(lv_obj_t* child, lv_obj_t* parent) {
     lv_obj_get_coords(parent, &parent_area);
     assert(child_area.x1 >= parent_area.x1 && child_area.x2 <= parent_area.x2);
     assert(child_area.y1 >= parent_area.y1 && child_area.y2 <= parent_area.y2);
+}
+void assert_schedule_center(lv_obj_t* row) {
+    lv_area_t area;
+    lv_obj_get_coords(row, &area);
+    // The page arrows meet at display y=233, independent of row height.
+    const int center_y = area.y1 + lv_area_get_height(&area) / 2;
+    assert(center_y == 233);
+}
+unsigned centered_schedule_row(lv_obj_t* list) {
+    unsigned nearest = 0;
+    int nearest_distance = Height * 2;
+    for (unsigned i = 0; i < lv_obj_get_child_count(list); ++i) {
+        lv_area_t area;
+        lv_obj_get_coords(lv_obj_get_child(list, i), &area);
+        const int delta = area.y1 + area.y2 - 466;
+        const int distance = delta < 0 ? -delta : delta;
+        if (distance < nearest_distance) {
+            nearest = i;
+            nearest_distance = distance;
+        }
+    }
+    assert_schedule_center(lv_obj_get_child(list, nearest));
+    return nearest;
 }
 int visible_dots(lv_obj_t* object) {
     if (lv_obj_has_flag(object, LV_OBJ_FLAG_HIDDEN)) return 0;
@@ -482,6 +518,7 @@ int main(int argc, char** argv) {
     assert(lv_obj_get_style_border_opa(upcoming, LV_PART_MAIN) == LV_OPA_TRANSP);
     assert(lv_obj_get_style_opa(upcoming, LV_PART_MAIN) == LV_OPA_COVER);
     assert_inside(current, schedule);
+    assert_schedule_center(current);
     snapshot("schedule-current");
     lv_area_t current_area;
     lv_obj_get_coords(current, &current_area);
@@ -514,6 +551,7 @@ int main(int argc, char** argv) {
     model.schedule_bookmarks = 1 << 1;
     badge::ui_update(model); spin();
     assert(lv_obj_get_scroll_y(schedule) == bookmarked_scroll);
+    assert_schedule_center(current);
     snapshot("schedule-bookmarked");
     bookmarked = -1;
     touch(340, bookmark_y, true);
@@ -526,6 +564,8 @@ int main(int argc, char** argv) {
     const int entry_scroll = lv_obj_get_scroll_y(schedule);
     swipe(234, 335, 234, 170);
     assert(lv_obj_get_scroll_y(schedule) > entry_scroll && badge::ui_page_index() == 1);
+    assert(centered_schedule_row(schedule) > 1);
+    assert(bookmarked == -1);
     const int user_scroll = lv_obj_get_scroll_y(schedule);
     snapshot("schedule-scrolled");
 
@@ -537,6 +577,7 @@ int main(int argc, char** argv) {
     badge::ui_update(model);
     spin();
     assert(lv_obj_get_scroll_y(schedule) == user_scroll);
+    centered_schedule_row(schedule);
     assert(lv_obj_get_style_opa(current, LV_PART_MAIN) == LV_OPA_50);
     assert(find_label(upcoming, "On now"));
     for (size_t i = 0; i < heights.size(); ++i) assert(lv_obj_get_height(lv_obj_get_child(schedule, i)) == heights[i]);
@@ -576,8 +617,10 @@ int main(int argc, char** argv) {
     auto* last_title = find_label(lv_display_get_screen_active(display), badge_schedule::Items[8].title);
     schedule = lv_obj_get_parent(lv_obj_get_parent(last_title));
     assert_inside(lv_obj_get_child(schedule, 8), schedule);
+    assert_schedule_center(lv_obj_get_child(schedule, 8));
     const int last_entry_scroll = lv_obj_get_scroll_y(schedule);
     assert_chrome();
+    assert_complete_schedule_frame(display);
     snapshot("schedule-last-session");
     model.clock_text = "12:00 AM";
     model.schedule_minute = 0; // The published agenda repeats on the next local day.
@@ -589,6 +632,73 @@ int main(int argc, char** argv) {
     assert(lv_obj_get_scroll_y(schedule) == last_entry_scroll);
     snapshot("schedule-midnight");
     assert_chrome();
+    assert_idle();
+
+    // Entry before the first session or without a clock centers the first
+    // card, rather than leaving it at the clipping edge. Reopening while a
+    // session is current centers that row for every distinct wrapped height.
+    const auto reopen_schedule = [&]() {
+        badge::ui_page(1); spin();
+        badge::ui_page(-1); spin();
+        auto* title = find_label(lv_display_get_screen_active(display), badge_schedule::Items[0].title);
+        assert(title && badge::ui_page_index() == 1);
+        return lv_obj_get_parent(lv_obj_get_parent(title));
+    };
+    schedule = reopen_schedule();
+    assert_schedule_center(lv_obj_get_child(schedule, 0));
+    snapshot("schedule-before-first-session");
+    model.clock_valid = false;
+    model.schedule_minute = -1;
+    model.schedule_current = -1;
+    badge::ui_update(model); spin();
+    schedule = reopen_schedule();
+    assert_schedule_center(lv_obj_get_child(schedule, 0));
+    assert(find_label(lv_display_get_screen_active(display), "Set time in Settings"));
+    snapshot("schedule-invalid-entry");
+    for (size_t i = 0; i < badge_schedule::Items.size(); ++i) {
+        model.clock_valid = true;
+        model.schedule_minute = badge_schedule::Items[i].minute;
+        model.schedule_current = int(i);
+        badge::ui_update(model); spin();
+        schedule = reopen_schedule();
+        auto* row = lv_obj_get_child(schedule, i);
+        assert(find_label(row, "On now"));
+        assert_schedule_center(row);
+        assert_complete_schedule_frame(display);
+    }
+    assert_idle();
+
+    // Real native pointer drags settle on a centered row in both directions,
+    // including the first/last boundary. Browsing does not toggle bookmarks
+    // or accidentally become horizontal page navigation.
+    bookmarked = -1;
+    unsigned focused = centered_schedule_row(schedule);
+    assert(focused == badge_schedule::Items.size() - 1);
+    for (size_t step = 0; focused && step < badge_schedule::Items.size(); ++step) {
+        swipe(234, 170, 234, 335);
+        const unsigned next = centered_schedule_row(schedule);
+        assert(next < focused && badge::ui_page_index() == 1 && bookmarked == -1);
+        focused = next;
+    }
+    assert(focused == 0);
+    swipe(234, 170, 234, 335);
+    assert(centered_schedule_row(schedule) == 0);
+    assert(badge::ui_page_index() == 1 && bookmarked == -1);
+    assert_complete_schedule_frame(display);
+    snapshot("schedule-first-focused");
+    assert_idle();
+    for (size_t step = 0; focused + 1 < badge_schedule::Items.size() && step < badge_schedule::Items.size(); ++step) {
+        swipe(234, 335, 234, 170);
+        const unsigned next = centered_schedule_row(schedule);
+        assert(next > focused && badge::ui_page_index() == 1 && bookmarked == -1);
+        focused = next;
+    }
+    assert(focused == badge_schedule::Items.size() - 1);
+    swipe(234, 335, 234, 170);
+    assert(centered_schedule_row(schedule) == badge_schedule::Items.size() - 1);
+    assert(badge::ui_page_index() == 1 && bookmarked == -1);
+    assert_complete_schedule_frame(display);
+    snapshot("schedule-last-focused");
     assert_idle();
 
     badge::ui_page(2);

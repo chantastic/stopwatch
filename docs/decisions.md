@@ -13,6 +13,12 @@ precedence when a later change updates these decisions.
 
 ## Product direction
 
+- September 17 schedule focus follow-up: center the focused event vertically
+  between the navigation arrows using native LVGL scroll snapping. On entry,
+  focus the current block, or the first block before the agenda/with invalid time.
+  First and last rows must center too. Keep the supplied list clipping bounds,
+  content-based card heights, and the reader's position across clock/bookmark updates.
+
 - September 17 After Dark follow-up supersedes the earlier hidden-page/pusher
   choice below: keep After Dark in navigation and show all six page indicators.
   Its locked central square says exactly `tap code to reveal`; enter Morse

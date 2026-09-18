@@ -8,6 +8,9 @@ namespace badge::ui {
 namespace {
 constexpr int RowWidth = 273;
 constexpr int ContentWidth = RowWidth - 32; // Fourteen-pixel padding plus the reserved border.
+constexpr int ListTop = 126;
+constexpr int ListHeight = 254;
+constexpr int FocusY = Height / 2; // Same vertical center as the navigation arrows.
 
 lv_obj_t* wrapped_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color) {
     auto* text_object = label(parent, text, 0, 0, ContentWidth, font, color);
@@ -79,11 +82,14 @@ public:
     SchedulePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         label(root_, "Schedule", 84, 52, 300, &font_sans_24, cream());
         subtitle_ = label(root_, "", 64, 87, 340, &font_mono_semibold_12, muted());
-        list_ = container(root_, 98, 126, RowWidth, 254);
+        list_ = container(root_, 98, ListTop, RowWidth, ListHeight);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);
         lv_obj_set_scrollbar_mode(list_, LV_SCROLLBAR_MODE_OFF);
-        lv_obj_set_style_pad_bottom(list_, 0, 0);
+        // LVGL centers snap targets within the padded viewport. Keep the
+        // design's clipping bounds, with its focus aligned to the arrows.
+        lv_obj_set_style_pad_bottom(list_, ListHeight - 2 * (FocusY - ListTop), 0);
+        lv_obj_set_scroll_snap_y(list_, LV_SCROLL_SNAP_CENTER);
         lv_obj_set_flex_flow(list_, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_style_pad_row(list_, 12, 0);
 
@@ -91,6 +97,7 @@ public:
             const auto& item = badge_schedule::Items[i];
             auto& row = rows_[i];
             row.box = container(list_, 0, 0, RowWidth, 1);
+            lv_obj_add_flag(row.box, LV_OBJ_FLAG_SNAPPABLE);
             lv_obj_set_height(row.box, LV_SIZE_CONTENT);
             lv_obj_set_flex_flow(row.box, LV_FLEX_FLOW_COLUMN);
             lv_obj_set_style_pad_all(row.box, 12, 0);
@@ -126,9 +133,11 @@ public:
         update();
         lv_obj_update_layout(list_);
         const int current = context_.model.schedule_current;
-        if (current >= 0 && current < int(rows_.size()) && rows_[current].state == badge_schedule::State::OnNow) {
-            lv_obj_scroll_to_view(rows_[current].box, LV_ANIM_OFF);
-        }
+        const int focus = current >= 0 && current < int(rows_.size()) &&
+            rows_[current].state == badge_schedule::State::OnNow ? current : 0;
+        // Native snapping also centers the first/last row beyond the normal
+        // scroll bounds; no spacer widgets or custom gesture/animation code.
+        lv_obj_scroll_to_view(rows_[focus].box, LV_ANIM_OFF);
     }
 
     void update() override {

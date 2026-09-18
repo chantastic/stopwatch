@@ -182,9 +182,13 @@ because no end time is published; its detail says `End time not listed`.
 Before 8:00 AM every block is upcoming. Midnight resets all rows to upcoming.
 An invalid clock selects no current/passed rows.
 
-On entry, the schedule scrolls to the current block. Subsequent clock changes
-update the highlight and dimming in place without moving the user's reading
-position. Titles and details wrap; row heights are based on their content.
+On entry, the schedule centers the current block between the navigation arrows;
+before the first event or with an invalid clock, it centers the first block.
+Vertical swipes use native LVGL center snapping, so the event the reader stops on
+settles at that same center, including the first and last events. The original
+list clipping bounds remain intact. Subsequent clock changes update the highlight
+and dimming in place without moving the user's reading position. Titles and
+details wrap; row heights are based on their content.
 The older absolute-UTC helper in `firmware/devices_badge/conference_schedule.h`
 is retained only for the Arduino application and its historical tests.
 
@@ -366,6 +370,18 @@ Hardware verification results and limits belong in the dated report below;
 compilation/host simulations alone are not proof of physical behavior.
 
 ## Verification record
+
+The September 17 schedule-centering follow-up uses LVGL's native center snap at
+display Y=233, matching the arrows. Sanitized native UI tests passed for all nine
+events on entry, both swipe directions and end boundaries, invalid/pre-agenda
+time, idle rendering, bookmarks and clock-update scroll preservation. The device
+build and guarded flash passed; public framebuffer captures confirm the centered
+card on entry and after USB-simulated swipes in both directions. Pre/post-flash
+saved-state indicators matched, radios remained off, and the original page was
+restored. Physical fingertip alignment is not established by these simulated
+inputs. Application SHA-256:
+`759e4eb78368350e3f128f3fe1015772c6aa5de6b58f2b2931a472c64463e591`.
+Private evidence: `.build/schedule-center/`.
 
 The September 17 touch-entry follow-up passed native LVGL tests with address and
 undefined-behavior sanitizers, portable Morse/reveal tests, capture-script tests,

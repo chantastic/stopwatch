@@ -64,6 +64,9 @@
   and Cancel. Settings-launched setup returns to Settings. The published agenda
   in `factory_badge/main/schedule.h` repeats daily using the badge's local clock:
   current rows say On now, passed rows are dimmed, and invalid time marks neither.
+  Schedule opens with the current event centered between the arrows (first event
+  if none is current); native LVGL center snapping settles swipes on an event.
+  Clock/bookmark updates preserve the reader's position.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
   conference profile/photo/links, bookmarks and UI preferences; retain clock,
