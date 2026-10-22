@@ -192,6 +192,7 @@
   on the device, never baked into source.
 - Keep full-flash backups, NVS dumps, live diagnostic logs, screenshots, and
   generated binaries outside Git. Build and test output goes in `.build/`.
+  Exception: user-approved public reference views live in `docs/views/`.
 - `scripts/build.sh` compiles; `scripts/test.sh` runs the host checks on macOS.
   Use the dependency versions in README.md.
   LVGL and hardware state belong to the main task; HTTP/DNS run on workers.
